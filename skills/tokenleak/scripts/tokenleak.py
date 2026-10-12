@@ -1038,6 +1038,15 @@ def quiet_advice(family):
     return LOG_HINT.format(cmd=family)
 
 
+def inside(path, root):
+    """Is `path` under `root`? Separator- and drive-aware (Windows too)."""
+    p, r = os.path.normcase(os.path.abspath(path)), os.path.normcase(os.path.abspath(root))
+    try:
+        return p != r and os.path.commonpath([p, r]) == r
+    except ValueError:  # different drives
+        return False
+
+
 def suggest(threads, out=None, since=0.0):
     """Turn this project's recurring leaks into rules to paste into CLAUDE.md / AGENTS.md."""
     out = out or sys.stdout
@@ -1058,7 +1067,7 @@ def suggest(threads, out=None, since=0.0):
                 e[0] += 1; e[1] += f.tokens; e[2] += f.cost
         elif f.kind in ("big-read", "re-read"):
             path = _norm(f.label, f.thread.cwd)
-            if not root or not path.startswith(root.rstrip("/") + "/") or not os.path.isfile(path):
+            if not root or not inside(path, root) or not os.path.isfile(path):
                 continue  # only files that exist in this project (relative reads after a `cd` can point elsewhere)
             key = rel(path)
             e = files.setdefault(key, [0, 0.0, 0.0])
@@ -1086,7 +1095,7 @@ def suggest(threads, out=None, since=0.0):
     name = os.path.basename(root.rstrip("/")) if root else "this project"
     window = datetime.fromtimestamp(since).strftime("%Y-%m-%d") if since else "the beginning"
     spend = f", about ${totals['usd_leak']:,.2f} of avoidable spend" if totals["usd_leak"] else ""
-    out.write(f"<!-- tokenleak suggest: {totals['sessions']} sessions in {name} since {window}, "
+    out.write(f"<!-- tokenleak suggest: {totals['sessions']} session{'s' * (totals['sessions'] != 1)} in {name} since {window}, "
               f"leak score {totals['leak_pct']:.1f}%{spend} -->\n")
     if not lines:
         out.write("No project-specific rules to add. Run `tokenleak --here` for the session-level leaks.\n")
