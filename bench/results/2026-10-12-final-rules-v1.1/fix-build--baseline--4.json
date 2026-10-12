@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 4,
+  "wall_s": 52.5,
+  "pass": true,
+  "cost_usd": 0.4456264,
+  "num_turns": 14,
+  "session_id": "7ec512a7-5eb5-480b-b093-7ee4599a4967",
+  "answer": "`./build.sh` now passes. The bug was a single mismatched function name in `tools/report.py` \u2014 it called `shipping.ship_cost_for(product)`, but `shopcart/shipping.py` only defines `ship_cost(product)` (used consistently elsewhere in `cart.py` and the tests). Fixed by calling the correct function name.",
+  "model": "claude-sonnet-5",
+  "api_calls": 8,
+  "context_tokens": 723527,
+  "output_tokens": 2684,
+  "max_context": 115202,
+  "leak_pct": 22.27,
+  "leaks": {
+    "big-read": 2,
+    "wide-search": 1
+  },
+  "escaped": false
+}

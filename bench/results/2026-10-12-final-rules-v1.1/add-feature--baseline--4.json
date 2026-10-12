@@ -1,0 +1,21 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 4,
+  "wall_s": 40.6,
+  "pass": true,
+  "cost_usd": 0.2879306,
+  "num_turns": 10,
+  "session_id": "39130531-a882-459c-90ef-bf32c536ab3a",
+  "answer": "Both work now and end with the expected `report: N orders, revenue ... EUR` summary line, with `--category toys` correctly keeping only toy orders (300 of the 2400 total, all SKUs prefixed `TY-`).\n\nNote: I also fixed a pre-existing bug in `tools/report.py` \u2014 it called `shipping.ship_cost_for(product)`, but the actual function in `shopcart/shipping.py` is `ship_cost`. This was broken before my change (reproducible on the unmodified script) and blocked the command from running at all, so I correct",
+  "model": "claude-sonnet-5",
+  "api_calls": 8,
+  "context_tokens": 582599,
+  "output_tokens": 2702,
+  "max_context": 81073,
+  "leak_pct": 17.33,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false
+}

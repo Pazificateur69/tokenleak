@@ -11,6 +11,8 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 
 <p align="center"><img src="assets/demo.svg" alt="tokenleak audit output" width="900"></p>
 
+**−40% cost on a 40-run A/B benchmark, same pass rate (20/20).** [Details](#benchmark).
+
 ## Why
 
 In an agent loop, **every tool result you let into context is re-sent on every later call** until the context is compacted. A 6k-token test log read at call 5 of a 60-call session gets paid ~55 more times. Every extra round-trip re-sends the whole context.
@@ -86,7 +88,24 @@ Everything stays on your machine: no network, no telemetry, ~900 lines of stdlib
 
 ## Benchmark
 
-BENCHMARK_PLACEHOLDER
+A/B test in Claude Code (`claude -p`, Sonnet 5): same prompt, a fresh copy of the same small repo for every run, 5 runs per arm. The **only** difference is the tokenleak rules appended to the system prompt (what the plugin injects). Every run is checked by a script: tests green, build passing, exact answer, feature working.
+
+| task | without | with tokenleak | change | passed |
+|---|---|---|---|---|
+| fix a failing test (chatty test logs) | $0.140 | $0.140 | 0% | 5/5 · 5/5 |
+| answer a question about data in a big module | $0.206 | $0.160 | **−22%** | 5/5 · 5/5 |
+| fix a build buried in 600 lines of output | $0.267 | $0.159 | **−40%** | 5/5 · 5/5 |
+| add a feature *(held out, see below)* | $0.459 | $0.184 | **−60%** | 5/5 · 5/5 |
+| **total** | **$1.07** | **$0.64** | **−40%** | **20/20 · 20/20** |
+
+Median API-equivalent cost per run, as reported by Claude Code. On every task where it helped, the most expensive tokenleak run cost less than the cheapest run without it. Context tokens −28%, output tokens −17%. The image at the top is the audit of the 20 runs *without* the rules.
+
+**Read it honestly.**
+- The rules were piloted first (v1, 30 runs: −23%, 15/15 vs 15/15). Reading those transcripts led to two new rules (check a file's size before opening it; compute, don't read data). So that this isn't tuning on the test, a fourth task, `add-feature`, was written before the change and never used to tune the rules: it shows the biggest gain. Both runs, with the exact rules used, are in [bench/results](bench/results).
+- One model, four small tasks, a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Your numbers will differ: run the audit on your own sessions before and after.
+- Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
+
+Reproduce: `python3 bench/run.py --runs 5` (40 runs, about $9 of API-equivalent usage).
 
 ## The rules
 

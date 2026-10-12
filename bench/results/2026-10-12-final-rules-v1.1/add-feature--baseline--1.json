@@ -1,0 +1,21 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 55.1,
+  "pass": true,
+  "cost_usd": 0.49228900000000003,
+  "num_turns": 13,
+  "session_id": "2f63434b-6b82-45f1-93de-a29e0125c075",
+  "answer": "That's fine, no pytest installed \u2014 not part of this task's scope. The feature works as required.\n\n**Summary:** Added `--category` to `tools/report.py` via argparse, filtering orders by `product[\"category\"]` before computing line/ship totals. Also fixed a pre-existing bug (`shipping.ship_cost_for` \u2192 `shipping.ship_cost`) that was breaking the command entirely, filtered or not. Verified both `--category toys` and the unfiltered run complete and print the summary line.",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 1056087,
+  "output_tokens": 3483,
+  "max_context": 107873,
+  "leak_pct": 20.28,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false
+}

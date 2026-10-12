@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 5,
+  "wall_s": 41.7,
+  "pass": true,
+  "cost_usd": 0.21764599999999998,
+  "num_turns": 9,
+  "session_id": "8b2bec45-88b2-458b-8aef-89408f5b1aa9",
+  "answer": "Build passes now. The bug was `tools/report.py` calling `shipping.ship_cost_for(...)`, a function that doesn't exist \u2014 the actual function (used by `cart.py` and all of `tests/test_cart.py`) is `shipping.ship_cost`. Fixed the call site to match the established API.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 539817,
+  "output_tokens": 1739,
+  "max_context": 67371,
+  "leak_pct": 6.03,
+  "leaks": {
+    "wide-search": 1
+  },
+  "escaped": false
+}

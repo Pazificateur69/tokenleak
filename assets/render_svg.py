@@ -12,12 +12,14 @@ LINE_H, CHAR_W, PAD, TOP = 19, 8.4, 20, 44
 lines = sys.stdin.read().rstrip("\n").split("\n")
 width = int(max(len(re.sub(r"\033\[[0-9;]*m", "", l)) for l in lines) * CHAR_W + 2 * PAD)
 height = TOP + len(lines) * LINE_H + PAD
-out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+out = [f'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="{width}" height="{height}" '
+       f'viewBox="0 0 {width} {height}">',
+       '<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;'
+       'font-size:14px;white-space:pre;fill:#c9d1d9}</style>',
        f'<rect width="{width}" height="{height}" rx="10" fill="#0d1117"/>',
        '<circle cx="22" cy="20" r="6" fill="#ff5f56"/><circle cx="42" cy="20" r="6" fill="#ffbd2e"/>'
        '<circle cx="62" cy="20" r="6" fill="#27c93f"/>',
-       '<g font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="14" fill="#c9d1d9" '
-       'xml:space="preserve">']
+       '<g>']
 for i, line in enumerate(lines):
     y = TOP + i * LINE_H
     spans, style = [], {}

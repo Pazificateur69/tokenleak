@@ -7,6 +7,8 @@ Rien à voir avec des clés API qui fuient : il s'agit des tokens que ton agent 
 
 <p align="center"><a href="README.md">English</a></p>
 
+**−40 % de coût sur un benchmark A/B de 40 runs, même taux de réussite (20/20).** Méthode et limites : [section Benchmark](README.md#benchmark).
+
 ## Pourquoi
 
 Dans une boucle d'agent, **chaque résultat d'outil qui entre dans le contexte est renvoyé à chaque appel suivant**, jusqu'à la compaction. Un log de tests de 6k tokens lu à l'appel 5 d'une session de 60 appels est payé ~55 fois de plus. Chaque aller-retour supplémentaire renvoie tout le contexte.

@@ -679,8 +679,10 @@ def run(args):
         if not t.subagent:
             w = weights(t)
             n, nseg = len(t.calls), len({c.seg for c in t.calls})
-            firsts.append(t.calls[0].ctx_in)
-            base_cost += t.calls[0].ctx_in * (nseg * w["enter"] + (n - nseg) * w["read"])
+            first = t.calls[0]
+            firsts.append(first.ctx_in)
+            # what the first call really paid for its input, then a cache read of it on every later call
+            base_cost += call_cost(t, first, w) - w["out"] * first.out + first.ctx_in * w["read"] * (n - 1)
             for f, toks in always_loaded(t.agent, t.cwd):
                 e = loaded.setdefault(f, {"tokens": toks, "cost": 0.0, "sessions": 0})
                 e["cost"] += toks * (nseg * w["enter"] + (n - nseg) * w["read"])
@@ -738,8 +740,10 @@ def label_of(f, redact):
     if redact:
         return f.tool
     lab = re.sub(r"\s+", " ", str(f.label)).strip()
-    home = os.path.expanduser("~")
-    lab = lab.replace(home, "~")
+    cwd = (f.thread.cwd or "").rstrip("/")
+    if cwd:  # paths relative to the session's project
+        lab = re.sub(r'cd "?' + re.escape(cwd) + r'"? *&& *', "", lab).replace(cwd + "/", "")
+    lab = lab.replace(os.path.expanduser("~"), "~")
     return f"{f.tool} {lab}" if lab and lab != f.tool else f.tool
 
 
@@ -765,7 +769,7 @@ def print_report(totals, by_kind, findings, since, args, out=None):
     color = {"A": "32", "B": "32", "C": "33", "D": "31", "F": "31"}[g]
     money = f"   ≈ ${totals['usd_leak']:,.2f} avoidable" if totals["usd_leak"] else ""
     w(f"\n  {st('1', 'LEAK SCORE')}  {st('1;' + color, f'{pct:.1f}%')}  grade {st('1;' + color, g)}{money}"
-      f"   {st('2', 'share of token cost spent on avoidable context (A <5 · B <10 · C <20 · D <30)')}\n\n")
+      f"   {st('2', '% of token cost that was avoidable · A<5 B<10 C<20 D<30')}\n\n")
     if not by_kind:
         w("  No leaks found. Your agent is lean.\n\n")
         return
@@ -776,7 +780,8 @@ def print_report(totals, by_kind, findings, since, args, out=None):
         w(f"  {kind:<14}{k['count']:>7}{avoid:>12}{share:>8.1f}%   {st('2', KINDS[kind][2])}\n")
     if totals["always_loaded"] or totals["avg_first_call_context"]:
         w(f"\n  {st('1', 'always loaded')}  ~{totals['base_context_pct']:.0f}% of cost  "
-          f"{st('2', 'avg ' + fmt(totals['avg_first_call_context']) + ' tokens before the first tool call (system prompt, tools, MCP, files below), re-sent on every call; not counted as leaks')}\n")
+          f"{st('2', fmt(totals['avg_first_call_context']) + ' tok at session start (system prompt, tools, MCP'
+                + (', files below' if totals['always_loaded'] else '') + '), re-sent every call')}\n")
         home = os.path.expanduser("~")
         for e in totals["always_loaded"][:5]:
             share = pct_str(100 * e["cost"] / totals["cost_units"] if totals["cost_units"] else 0)
@@ -785,7 +790,7 @@ def print_report(totals, by_kind, findings, since, args, out=None):
             path = path if len(path) <= 60 else "…" + path[-59:]
             w(f"  {share:>7}  {path:<60} {st('2', fmt(e['tokens']) + ' tok (current size)')}\n")
     w(f"\n  {st('1', 'top leaks')}\n")
-    width = 58
+    width = 46
     for i, f in enumerate(findings[: args.top], 1):
         share = pct_str(100 * f.cost / totals["cost_units"] if totals["cost_units"] else 0)
         lab = label_of(f, args.redact)
@@ -794,7 +799,7 @@ def print_report(totals, by_kind, findings, since, args, out=None):
             size = "extra round-trip"
         else:
             size = f"{fmt(f.tokens)} tok" + (f" × {f.later} later calls" if f.later else "")
-        where = "" if args.redact else f"{project_name(f.thread)} · {(f.thread.session or '')[:8]}"
+        where = "" if args.redact else f"{project_name(f.thread)[:22]} · {(f.thread.session or '')[:8]}"
         w(f"  {i:>2}  {share:>6}  {st('33', f'{f.kind:<13}')} {lab:<{width}}  {st('2', size)}  {st('2', where)}\n")
     w(st("2", "\n  estimates: tokens ≈ chars/4 · avoidable = size above a sane budget, priced on every later call that"
               "\n  re-sent it (cache read 0.1x, write 1.25-2x, output 5x) · everything stays on this machine\n"))

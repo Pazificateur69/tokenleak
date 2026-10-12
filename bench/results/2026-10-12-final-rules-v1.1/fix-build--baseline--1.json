@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 48.4,
+  "pass": true,
+  "cost_usd": 0.2666372,
+  "num_turns": 11,
+  "session_id": "ab958a33-d977-4213-bae5-69f7bc5c7dce",
+  "answer": "`./build.sh` now passes. The cause was a typo in `tools/report.py`: it called `shipping.ship_cost_for(product)`, but the shipping module only defines `ship_cost` (used consistently elsewhere in `cart.py` and all tests). Fixed by calling the correct existing function name.\n\nNote: `python3 -m unittest` has one unrelated pre-existing failure in `test_pricing.py` (`bulk_discount` at threshold), but `build.sh` doesn't invoke the test suite, so it's outside this fix's scope \u2014 let me know if you'd like",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 636047,
+  "output_tokens": 2497,
+  "max_context": 73194,
+  "leak_pct": 8.63,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false
+}

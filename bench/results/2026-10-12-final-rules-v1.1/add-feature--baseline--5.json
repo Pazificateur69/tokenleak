@@ -1,0 +1,23 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 5,
+  "wall_s": 48.5,
+  "pass": true,
+  "cost_usd": 0.42111879999999996,
+  "num_turns": 14,
+  "session_id": "8e646bc9-9819-4070-828e-325d27c8db9c",
+  "answer": "Both filtered and unfiltered runs work correctly (300 toys orders vs. 2400 total, consistent with 8 categories). pytest isn't installed in this environment, but that's unrelated to the change.\n\nSummary: added `--category` to `tools/report.py` via `argparse`, filtering orders by product category using the existing `catalog.by_sku(...)[\"category\"]` lookup. Also fixed a pre-existing bug where the script called `shipping.ship_cost_for` (doesn't exist) instead of `shipping.ship_cost` \u2014 without that f",
+  "model": "claude-sonnet-5",
+  "api_calls": 14,
+  "context_tokens": 1026304,
+  "output_tokens": 2884,
+  "max_context": 92285,
+  "leak_pct": 22.4,
+  "leaks": {
+    "big-read": 1,
+    "noisy-shell": 1,
+    "serial-call": 1
+  },
+  "escaped": false
+}
