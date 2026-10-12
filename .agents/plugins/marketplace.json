@@ -1,0 +1,21 @@
+{
+  "name": "tokenleak",
+  "interface": {
+    "displayName": "tokenleak"
+  },
+  "plugins": [
+    {
+      "name": "tokenleak",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/Pazificateur69/tokenleak.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
