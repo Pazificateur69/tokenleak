@@ -301,8 +301,12 @@ def write(root):
         with open(path, "w") as f:
             f.write(text)
     os.chmod(os.path.join(root, "build.sh"), 0o755)
-    toys = sum(1 for i in range(1, 2401) if prods[(i * 13) % len(prods)]["category"] == "toys")
-    return {"t2_count": sum(1 for p in prods if p["weight_g"] >= 1500 and p["stock"] == 0), "t4_toys": toys}
+    by_cat = {}
+    for i in range(1, 2401):
+        cat = prods[(i * 13) % len(prods)]["category"]
+        by_cat[cat] = by_cat.get(cat, 0) + 1
+    return {"t2_count": sum(1 for p in prods if p["weight_g"] >= 1500 and p["stock"] == 0), "t4_toys": by_cat["toys"],
+            "t4_by_cat": by_cat}
 
 
 if __name__ == "__main__":

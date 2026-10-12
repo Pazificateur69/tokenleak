@@ -15,5 +15,12 @@
   "max_context": 59773,
   "leak_pct": 0.0,
   "leaks": {},
-  "escaped": true
+  "escaped": true,
+  "usage": {
+    "fresh": 16,
+    "cache_write_5m": 0,
+    "cache_write_1h": 16681,
+    "cache_read": 437368,
+    "output": 1268
+  }
 }

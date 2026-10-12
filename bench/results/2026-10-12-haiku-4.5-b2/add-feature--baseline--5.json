@@ -17,5 +17,12 @@
   "leaks": {
     "big-read": 2
   },
-  "escaped": false
+  "escaped": false,
+  "usage": {
+    "fresh": 106,
+    "cache_write_5m": 0,
+    "cache_write_1h": 62295,
+    "cache_read": 969782,
+    "output": 3392
+  }
 }

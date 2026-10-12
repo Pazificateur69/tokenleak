@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -146,7 +146,7 @@ def parse_claude(path):
     main, side = Thread(path, "claude"), Thread(path, "claude")
     side.subagent = True
     state = {False: (main, {}, {}), True: (side, {}, {})}
-    seg = 0
+    seg, seen = 0, set()
     for pos, d in _json_lines(path):
         if not isinstance(d, dict):
             continue
@@ -191,6 +191,9 @@ def parse_claude(path):
                 if not isinstance(c, dict):
                     continue
                 if c.get("type") == "tool_use":
+                    if c.get("id") and c.get("id") in seen:  # the same block logged again
+                        continue
+                    seen.add(c.get("id"))
                     tu = ToolUse(c.get("id"), c.get("name"), c.get("input") or {}, pos)
                     tu.call = call
                     call.tools.append(tu)
@@ -224,7 +227,7 @@ def parse_claude(path):
 
 def parse_codex(path):
     t = Thread(path, "codex")
-    pending, seg = {}, 0
+    pending, done, seg = {}, {}, 0
     records, counts, last_total = [], [], None
     for pos, d in _json_lines(path):
         if not isinstance(d, dict):
@@ -274,11 +277,18 @@ def parse_codex(path):
                 t.uses.append(tu)
                 pending[tu.id] = tu
             elif pt in ("function_call_output", "custom_tool_call_output", "local_shell_call_output"):
-                tu = pending.pop(p.get("call_id"), None)
+                cid = p.get("call_id")
+                tu = pending.pop(cid, None) or done.get(cid)
                 if tu is not None:
                     text, toks = measure(p.get("output"))
-                    tu.result = Result(tu, pos, seg, toks, text[:MAX_KEEP_CHARS])
-                    t.results.append(tu.result)
+                    if tu.result is None:
+                        tu.result = Result(tu, pos, seg, toks, text[:MAX_KEEP_CHARS])
+                        t.results.append(tu.result)
+                        if cid:
+                            done[cid] = tu
+                    else:  # a later chunk of the same call's output
+                        tu.result.tokens += toks
+                        tu.result.text = (tu.result.text + text)[:MAX_KEEP_CHARS]
             elif pt == "message" and p.get("role") == "assistant":
                 t.uses.append(ToolUse(None, "__text__", sum(len(c.get("text") or "") for c in p.get("content") or []
                                                             if isinstance(c, dict)), pos))
@@ -590,7 +600,7 @@ def find_files(paths, agent, since):
                             out.append(p)
                     except OSError:
                         pass
-    return out
+    return list(dict.fromkeys(os.path.realpath(p) for p in out))
 
 
 def parse_since(s):
@@ -701,11 +711,17 @@ def collect(args):
             print(f"tokenleak: skipping {f}: {e}", file=sys.stderr)
     for t in parsed:
         f = t.path
+        if args.agent not in ("all", t.agent):
+            continue
         if t.calls:
             t.start_ctx = t.calls[0].ctx_in
         if since and t.calls:  # files are picked by mtime; only count the calls inside the window
             keep = [c for c in t.calls if c.ts is None or c.ts >= since]
             if len(keep) < len(t.calls):
+                if t.cost_usd is not None:  # the recorded cost covers the whole session: keep the window's share
+                    w = weights(t)
+                    full = sum(call_cost(t, c, w) for c in t.calls)
+                    t.cost_usd = t.cost_usd * sum(call_cost(t, c, w) for c in keep) / full if full else None
                 first = keep[0].pos if keep else float("inf")
                 t.calls = keep
                 t.uses = [u for u in t.uses if u.pos >= first]
@@ -816,6 +832,7 @@ def summarize(threads):
         "leak_pct": pct,
         "grade": grade(pct),
         "usd_total": usd_total or None,
+        "usd_sessions": sum(1 for s in sess.values() if s["usd"]),
         "usd_leak": usd_leak or None,
         "avg_first_call_context": sum(firsts) / len(firsts) if firsts else 0,
         "base_context_pct": 100 * base_cost / units if units else 0,
@@ -882,7 +899,8 @@ def print_report(totals, by_kind, findings, since, args, out=None):
       f"{st('2', '(cache reads ' + fmt(totals['cache_read_tokens']) + ' · writes ' + fmt(totals['cache_write_tokens']) + ' · fresh ' + fmt(totals['fresh_tokens']) + ')')}"
       f"   output {fmt(totals['output_tokens'])}\n")
     if totals["usd_total"]:
-        w(f"  spend              ≈ ${totals['usd_total']:,.2f} API-equivalent {st('2', '(Claude Code sessions, its own pricing)')}\n")
+        n_usd = f"{totals['usd_sessions']} of {totals['sessions']} sessions record a cost"
+        w(f"  spend              ≈ ${totals['usd_total']:,.2f} API-equivalent {st('2', '(Claude Code pricing; ' + n_usd + ')')}\n")
     sp = totals["cost_split_pct"]
     w(f"  cost split         context {sp['context']:.0f}% {st('2', '(cache reads ' + format(sp['cache_read'], '.0f') + '% · writes and uncached ' + format(sp['cache_write'], '.0f') + '%)')}"
       f"   output {sp['output']:.0f}%\n")
@@ -892,9 +910,9 @@ def print_report(totals, by_kind, findings, since, args, out=None):
     w(f"\n  {st('1', 'LEAK SCORE')}  {st('1;' + color, f'{pct:.1f}%')}  grade {st('1;' + color, g)}{money}"
       f"   {st('2', '% of token cost that was avoidable · A<5 B<10 C<20 D<30')}\n\n")
     if not by_kind:
-        w("  No leaks found. Your agent is lean.\n\n")
-        return
-    w(st("2", f"  {'leak':<14}{'count':>7}{'avoidable':>12}{'of cost':>9}   fix\n"))
+        w("  No leaks found. Your agent is lean.\n")
+    else:
+        w(st("2", f"  {'leak':<14}{'count':>7}{'avoidable':>12}{'of cost':>9}   fix\n"))
     for kind, k in sorted(by_kind.items(), key=lambda kv: -kv[1]["cost"]):
         share = 100 * k["cost"] / totals["cost_units"] if totals["cost_units"] else 0
         avoid = fmt(k["avoidable_tokens"]) if k["avoidable_tokens"] else "-"
@@ -923,7 +941,8 @@ def print_report(totals, by_kind, findings, since, args, out=None):
             path = path if len(path) <= 60 else "…" + path[-59:]
             size = fmt(e["tokens"]) + " tok (" + ("as loaded" if e.get("exact") else "current size") + ")"
             w(f"  {share:>7}  {path:<60} {st('2', size)}\n")
-    w(f"\n  {st('1', 'top leaks')}\n")
+    if findings:
+        w(f"\n  {st('1', 'top leaks')}\n")
     width = 46
     for i, f in enumerate(findings[: args.top], 1):
         share = pct_str(100 * f.cost / totals["cost_units"] if totals["cost_units"] else 0)
@@ -1100,7 +1119,7 @@ def to_json(totals, by_kind, findings, args):
             "tokens": round(f.tokens), "avoidable_tokens": round(f.avoidable), "later_calls": f.later,
             "cost_units": round(f.cost, 1),
             "share_pct": round(100 * f.cost / totals["cost_units"], 3) if totals["cost_units"] else 0,
-            "agent": f.thread.agent, "session": f.thread.session,
+            "agent": f.thread.agent, "session": None if args.redact else f.thread.session,
             "project": None if args.redact else f.thread.cwd, "line": f.pos,
         } for f in findings[: args.top if args.top else None]],
     }
@@ -1140,17 +1159,25 @@ SUBCOMMAND_TOOLS = {"npm", "pnpm", "yarn", "bun", "git", "docker", "cargo", "go"
                     "make", "kubectl", "terraform", "gh", "uv", "poetry", "composer", "php", "rails", "bundle", "mix",
                     "vitest", "jest", "playwright", "prisma", "next", "turbo", "nx", "cypress"}
 SUBCOMMAND = re.compile(r"^[a-z][a-z0-9:_-]*$")  # `run`, `test:unit`; not paths like `src/a.test.ts`
+def _logged(quiet, view='tail -n 40 "$L"', note=""):
+    """Advice that bounds a command's output and still shows its exit status (a pipe to tail would hide it)."""
+    return '`L="${{TMPDIR:-/tmp}}/out.log"; ' + quiet + ' > "$L" 2>&1; echo "exit=$?"; ' + view + '`' + note
+
+
+ONE_TEST = " (iterate on the one failing test)"
 QUIET = [  # (pattern on the command family, advice); first match wins
-    (r"\b(pytest|py\.test)\b", "`{cmd} -q -x 2>&1 | tail -n 40`"),
-    (r"\b(jest|vitest)\b", "`{cmd} --reporter=dot 2>&1 | tail -n 40` (iterate on the one failing test)"),
-    (r"^(npm|pnpm|yarn|bun) (run )?test", "`{cmd} --silent 2>&1 | tail -n 40` (iterate on the one failing test)"),
-    (r"^(npm|pnpm|yarn|bun) (install|ci|add|i)\b|^pip3? install|^uv (sync|pip)", "`{cmd} --silent` (or `-q`), then check the exit code only"),
-    (r"^cargo (test|build|check|clippy)", "`{cmd} -q 2>&1 | tail -n 40`"),
-    (r"^go (test|build|vet)", "`{cmd} 2>&1 | grep -v '^ok' | tail -n 40`"),
+    (r"\b(pytest|py\.test)\b", _logged("{cmd} -q -x")),
+    (r"\bvitest\b", _logged("{cmd} --reporter=dot", note=ONE_TEST)),
+    (r"\bjest\b", _logged("{cmd} --silent", note=ONE_TEST)),
+    (r"^(npm|pnpm|yarn|bun) (run )?test", _logged("{cmd} --silent", note=ONE_TEST)),
+    (r"^(npm|pnpm|yarn|bun) (install|ci|add|i)\b", _logged("{cmd} --silent", 'tail -n 20 "$L"')),
+    (r"^(pip3?|uv pip) install|^uv sync", _logged("{cmd} -q", 'tail -n 20 "$L"')),
+    (r"^cargo (test|build|check|clippy)", _logged("{cmd} -q")),
+    (r"^go (test|build|vet)", _logged("{cmd}", """grep -v '^ok' "$L" | tail -n 40""")),
     (r"^git status", "`git status -s`"),
     (r"^git (log|reflog)", "`git log --oneline -n 20` first, then `git show --stat <sha>`"),
     (r"^git (diff|show)", "`git diff --stat` first, then `git diff -- <path>` for the files you need"),
-    (r"^(tsc|npx tsc|eslint|npx eslint|ruff|mypy|pyright|flake8)\b", "`{cmd} 2>&1 | head -n 30` (fix the first errors, re-run)"),
+    (r"^(tsc|npx tsc|eslint|npx eslint|ruff|mypy|pyright|flake8)\b", _logged("{cmd}", 'head -n 30 "$L"', " (fix the first errors, re-run)")),
     (r"^(curl|wget|http)\b", "`{cmd} -s | head -c 2000` or pipe JSON through `jq` to pick fields"),
 ]
 # commands worth a project rule: build/test/install/lint/vcs tools, not one-off shell snippets
@@ -1171,7 +1198,7 @@ def is_project_command(cmd, family):
     return head in PROJECT_TOOLS
 
 
-LOG_HINT = '`L="${{TMPDIR:-/tmp}}/out.log"; {cmd} > "$L" 2>&1; echo "exit=$?"; tail -n 40 "$L"`'
+LOG_HINT = _logged("{cmd}")
 
 
 def command_family(cmd):
@@ -1330,7 +1357,7 @@ def guard(stdin, out=None):
     """Claude Code PreToolUse hook on Read: stop whole-file reads of big text files.
 
     The model gets the file size, an outline with line numbers so it can read just the part it needs, and how to
-    read it all anyway: passing `limit` (or `offset`) always goes through. Disable with TOKENLEAK_GUARD=0, tune with
+    read it all anyway: a positive `limit` always goes through (an `offset` alone still reads up to 2,000 lines). Disable with TOKENLEAK_GUARD=0, tune with
     TOKENLEAK_GUARD_BYTES.
     """
     out = out or sys.stdout
@@ -1346,7 +1373,8 @@ def guard(stdin, out=None):
     if not isinstance(inp, dict):
         return
     path = str(inp.get("file_path") or "")
-    if event.get("tool_name") != "Read" or inp.get("limit") or inp.get("offset") or not path \
+    limit = inp.get("limit")
+    if event.get("tool_name") != "Read" or (isinstance(limit, int) and limit > 0) or not path \
             or path.lower().endswith(GUARD_SKIP):
         return
     try:
@@ -1358,7 +1386,10 @@ def guard(stdin, out=None):
             if b"\0" in head[:4096]:  # binary: let the Read tool decide
                 return
             head_lines = head.count(b"\n")
-            lines = head_lines + sum(chunk.count(b"\n") for chunk in iter(lambda: fh.read(1 << 16), b""))
+            if size > 1 << 26:  # over 64 MB: estimate from the first 4 MB rather than scan it all inside a hook
+                lines = int(head_lines * size / len(head) * 1.1) + 1
+            else:
+                lines = head_lines + sum(chunk.count(b"\n") for chunk in iter(lambda: fh.read(1 << 16), b""))
     except (OSError, ValueError):
         return
     rows = outline(path, head.decode("utf-8", "replace"))

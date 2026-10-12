@@ -18,5 +18,12 @@
     "serial-call": 1
   },
   "escaped": false,
-  "batch": "b2"
+  "batch": "b2",
+  "usage": {
+    "fresh": 16,
+    "cache_write_5m": 0,
+    "cache_write_1h": 16687,
+    "cache_read": 432560,
+    "output": 1385
+  }
 }

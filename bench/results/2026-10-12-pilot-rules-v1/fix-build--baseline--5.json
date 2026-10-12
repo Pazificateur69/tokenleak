@@ -18,5 +18,12 @@
     "noisy-shell": 1,
     "wide-search": 1
   },
-  "escaped": false
+  "escaped": false,
+  "usage": {
+    "fresh": 20,
+    "cache_write_5m": 0,
+    "cache_write_1h": 30303,
+    "cache_read": 606399,
+    "output": 2863
+  }
 }

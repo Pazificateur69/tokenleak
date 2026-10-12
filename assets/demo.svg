@@ -4,7 +4,7 @@
 <circle cx="22" cy="20" r="6" fill="#ff5f56"/><circle cx="42" cy="20" r="6" fill="#ffbd2e"/><circle cx="62" cy="20" r="6" fill="#27c93f"/>
 <g>
 <text x="20" y="44"></text>
-<text x="20" y="63"><tspan font-weight="bold">tokenleak</tspan><tspan> 1.5.0  </tspan><tspan fill="#8b949e">·</tspan><tspan>  20 sessions (20 Claude Code)  </tspan><tspan fill="#8b949e">·</tspan><tspan>  156 API calls  </tspan><tspan fill="#8b949e">·</tspan><tspan>  since the beginning</tspan></text>
+<text x="20" y="63"><tspan font-weight="bold">tokenleak</tspan><tspan> 1.5.1  </tspan><tspan fill="#8b949e">·</tspan><tspan>  20 sessions (20 Claude Code)  </tspan><tspan fill="#8b949e">·</tspan><tspan>  156 API calls  </tspan><tspan fill="#8b949e">·</tspan><tspan>  since the beginning</tspan></text>
 <text x="20" y="82"></text>
 <text x="20" y="101"><tspan>  context processed  </tspan><tspan font-weight="bold">11.1M</tspan><tspan> tokens  </tspan><tspan fill="#8b949e">(cache reads 10.4M · writes 757.6k · fresh 312)</tspan><tspan>   output 37.5k</tspan></text>
 <text x="20" y="120"><tspan>  cost split         context 93% </tspan><tspan fill="#8b949e">(cache reads 38% · writes and uncached 55%)</tspan><tspan>   output 7%</tspan></text>

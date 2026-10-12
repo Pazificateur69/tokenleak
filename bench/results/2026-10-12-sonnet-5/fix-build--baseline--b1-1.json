@@ -19,5 +19,12 @@
     "wide-search": 1
   },
   "escaped": false,
-  "batch": "b1"
+  "batch": "b1",
+  "usage": {
+    "fresh": 20,
+    "cache_write_5m": 0,
+    "cache_write_1h": 30111,
+    "cache_read": 605916,
+    "output": 2497
+  }
 }

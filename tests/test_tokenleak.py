@@ -293,7 +293,10 @@ class TokenleakTest(unittest.TestCase):
         buf = io.StringIO()
         with redirect_stdout(buf):
             T.main([os.path.dirname(path), "--since", "2026-02-01", "--json"])
-        self.assertEqual(json.loads(buf.getvalue())["totals"]["api_calls"], 4)
+        totals = json.loads(buf.getvalue())["totals"]
+        self.assertEqual(totals["api_calls"], 4)
+        # the session's $2.00 covers all 8 calls: the window keeps its share (34400 of 68540 cost units)
+        self.assertAlmostEqual(totals["usd_total"], 2.0 * 34400 / 68540, places=4)
 
     def test_compare_respects_redact_and_rejects_html(self):
         buf = io.StringIO()
@@ -357,6 +360,8 @@ class TokenleakTest(unittest.TestCase):
         self.assertEqual(run({"tool_name": "Read", "tool_input": {"file_path": big, "limit": 3001}}), "")
         self.assertEqual(run({"tool_name": "Bash", "tool_input": {"command": "cat " + big}}), "")
         self.assertEqual(run([1, 2]), "")  # not an event: let the call through
+        offset_only = json.loads(run({"tool_name": "Read", "tool_input": {"file_path": big, "offset": 1}}))
+        self.assertEqual(offset_only["hookSpecificOutput"]["permissionDecision"], "deny")  # still ~2,000 lines
         self.assertEqual(run({"tool_name": "Read", "tool_input": {"file_path": big}}, {"TOKENLEAK_GUARD": "0"}), "")
 
         mod = os.path.join(self.dir, "mod.py")
@@ -399,6 +404,56 @@ class TokenleakTest(unittest.TestCase):
         totals, _, _ = T.summarize([t for t in T.parse(path) if t.calls])
         # 8 calls: fresh 8x10, writes 1.25 x 28000, reads 0.1 x 167100, output 5 x 3350 -> 68540 units
         self.assertEqual(totals["cost_split_pct"], {"cache_read": 24.4, "cache_write": 51.2, "output": 24.4, "context": 75.6})
+
+    def test_review_fixes(self):
+        # a tool_use block logged twice is one call
+        lines = claude_session()
+        dup = [i for i, d in enumerate(lines) if d["type"] == "assistant" and d["message"]["id"] == "m2"][0]
+        lines.insert(dup + 1, lines[dup])
+        path = os.path.join(self.dir, "dup.jsonl")
+        write_jsonl(path, lines)
+        self.assertEqual(len(T.parse(path)[0].uses), len(T.parse(self.claude)[0].uses))
+        # every output chunk of a Codex call counts
+        rollout = [{"type": "session_meta", "payload": {"id": "c9", "cwd": "/proj"}},
+                   {"type": "response_item", "payload": {"type": "function_call", "name": "shell", "call_id": "k1",
+                                                         "arguments": json.dumps({"command": ["cat", "a.log"]})}},
+                   {"type": "token_usage_record", "payload": {"usage": {"input_tokens": 9000, "output_tokens": 40}}},
+                   {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "k1", "output": "x" * 4000}},
+                   {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "k1", "output": "y" * 4000}}]
+        path = os.path.join(self.dir, "rollout-chunks.jsonl")
+        write_jsonl(path, rollout)
+        self.assertEqual(T.parse(path)[0].results[0].tokens, 2000)
+        # a folder and a file inside it: one transcript; --agent filters explicit paths too
+        self.assertEqual(len(T.find_files([self.dir, self.claude], "all", 0)), len(T.find_files([self.dir], "all", 0)))
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([self.codex, "--agent", "claude", "--no-color"])
+        self.assertIn("no transcripts found", buf.getvalue())
+        # no leaks: the report still shows what is always loaded
+        quiet = [{"type": "user", "sessionId": "q1", "cwd": "/proj", "message": {"role": "user", "content": "hi"}}]
+        quiet += assistant("q1m", u(c5m=20000), {"type": "text", "text": "Hello."})
+        path = os.path.join(self.dir, "quiet", "q.jsonl")
+        os.makedirs(os.path.dirname(path))
+        write_jsonl(path, quiet)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([path, "--since", "all", "--no-color"])
+        self.assertIn("No leaks found", buf.getvalue())
+        self.assertIn("always loaded", buf.getvalue())
+        self.assertNotIn("top leaks", buf.getvalue())
+        # --json --redact drops session ids
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([self.claude, "--since", "all", "--json", "--redact"])
+        self.assertTrue(all(f["session"] is None for f in json.loads(buf.getvalue())["findings"]))
+        # advice keeps the exit status and uses each tool's own quiet flag
+        for fam, flag in (("pytest", "-q -x"), ("npx jest", "--silent"), ("npx vitest", "--reporter=dot"),
+                          ("pip install", "-q"), ("go test", "go test")):
+            advice = T.quiet_advice(fam)
+            self.assertIn(flag, advice)
+            self.assertIn('echo "exit=$?"', advice)
+            self.assertNotIn(fam + " " + flag + " 2>&1 |", advice)
+        self.assertNotIn("--reporter", T.quiet_advice("npx jest"))
 
     def test_labels(self):
         self.assertEqual(T.tool_name("mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__guide"), "mcp:guide")

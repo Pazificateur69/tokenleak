@@ -18,5 +18,12 @@
     "big-read": 2
   },
   "escaped": false,
-  "batch": "b1"
+  "batch": "b1",
+  "usage": {
+    "fresh": 42,
+    "cache_write_5m": 0,
+    "cache_write_1h": 59807,
+    "cache_read": 251619,
+    "output": 1692
+  }
 }

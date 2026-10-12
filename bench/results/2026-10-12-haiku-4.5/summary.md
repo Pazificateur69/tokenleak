@@ -15,4 +15,6 @@
 
 **Sum of medians, tokenleak vs baseline**: cost $0.513 → $0.505 (-1%), context tokens 2.2M → 2.1M (-2%), output tokens 9.2k → 9.2k (-0%).
 **Sum of medians, guard vs baseline**: cost $0.513 → $0.408 (-20%), context tokens 2.2M → 2.2M (+1%), output tokens 9.2k → 10.6k (+15%).
+Median wall time per run: baseline 27s, tokenleak 28s, guard 37s.
+Output share of cost (median per run, relative price units): baseline 9.6%, tokenleak 10.5%, guard 12.7%.
 Passed: baseline 20/20, tokenleak 20/20, guard 20/20. Model: claude-haiku-4-5-20251001. Runs that tried to leave the repo: 0.

@@ -15,4 +15,6 @@
 
 **Sum of medians, tokenleak vs baseline**: cost $1.073 → $0.727 (-32%), context tokens 2.3M → 1.9M (-17%), output tokens 7.8k → 6.9k (-11%).
 **Sum of medians, guard vs baseline**: cost $1.073 → $0.831 (-22%), context tokens 2.3M → 2.0M (-12%), output tokens 7.8k → 7.1k (-9%).
+Median wall time per run: baseline 35s, tokenleak 31s, guard 38s.
+Output share of cost (median per run, relative price units): baseline 7.0%, tokenleak 8.5%, guard 7.7%.
 Passed: baseline 40/40, tokenleak 40/40, guard 20/20. Model: claude-sonnet-5. Runs that tried to leave the repo: 4.

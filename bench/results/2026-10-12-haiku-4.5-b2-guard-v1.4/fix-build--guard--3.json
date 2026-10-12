@@ -17,5 +17,12 @@
   "leaks": {
     "noisy-shell": 1
   },
-  "escaped": false
+  "escaped": false,
+  "usage": {
+    "fresh": 66,
+    "cache_write_5m": 0,
+    "cache_write_1h": 20277,
+    "cache_read": 360005,
+    "output": 2117
+  }
 }

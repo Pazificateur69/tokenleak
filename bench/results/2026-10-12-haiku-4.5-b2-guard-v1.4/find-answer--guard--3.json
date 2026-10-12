@@ -17,5 +17,12 @@
   "leaks": {
     "serial-call": 2
   },
-  "escaped": false
+  "escaped": false,
+  "usage": {
+    "fresh": 98,
+    "cache_write_5m": 0,
+    "cache_write_1h": 13170,
+    "cache_read": 510113,
+    "output": 1802
+  }
 }

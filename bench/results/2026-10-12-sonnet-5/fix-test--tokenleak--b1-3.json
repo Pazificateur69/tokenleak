@@ -16,5 +16,12 @@
   "leak_pct": 0.0,
   "leaks": {},
   "escaped": true,
-  "batch": "b1"
+  "batch": "b1",
+  "usage": {
+    "fresh": 14,
+    "cache_write_5m": 0,
+    "cache_write_1h": 15939,
+    "cache_read": 381478,
+    "output": 986
+  }
 }

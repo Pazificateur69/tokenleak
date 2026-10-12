@@ -10,4 +10,6 @@
 | add-feature | guard | 5 | 5/5 | $0.141 ($0.112-0.162) | 834.7k | 3.8k | 18 | 2.9% |
 
 **Sum of medians, guard vs baseline**: cost $0.530 → $0.379 (-28%), context tokens 2.4M → 2.0M (-17%), output tokens 9.6k → 8.9k (-7%).
+Median wall time per run: baseline 32s, guard 29s.
+Output share of cost (median per run, relative price units): baseline 11.2%, guard 10.9%.
 Passed: baseline 20/20, guard 20/20. Model: claude-haiku-4-5-20251001. Runs that tried to leave the repo: 0.

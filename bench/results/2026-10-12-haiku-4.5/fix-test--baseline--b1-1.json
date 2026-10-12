@@ -18,5 +18,12 @@
     "noisy-shell": 1
   },
   "escaped": false,
-  "batch": "b1"
+  "batch": "b1",
+  "usage": {
+    "fresh": 58,
+    "cache_write_5m": 0,
+    "cache_write_1h": 46742,
+    "cache_read": 245890,
+    "output": 2034
+  }
 }

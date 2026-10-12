@@ -18,13 +18,19 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 
 <p align="center"><img src="assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
-**−32% cost over 80 A/B runs on Sonnet 5, same pass rate (40/40). −20% to −28% on Haiku 4.5 with the read guard (two batches, 120 runs).** [Details](#benchmark).
+**−32% cost over 80 A/B runs on Sonnet 5 with the rules, same pass rate (40/40). −20% to −28% on Haiku 4.5 with the read guard (two batches, 120 runs).** [Details](#benchmark).
+
+**Try it first, nothing to install:** see where your own tokens went in ten seconds (Python 3.8+, reads your local transcripts, sends nothing).
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 7d
+```
 
 ## Why
 
 In an agent loop, **every tool result you let into context is re-sent on every later call** until the context is compacted. A 6k-token test log read at call 5 of a 60-call session gets paid ~55 more times. Every extra round-trip re-sends the whole context.
 
-So the bill isn't driven by how chatty the agent is. It's driven by **what it lets into its context, and how early**. In the [benchmark](#benchmark)'s runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was 7% of a run's cost on Sonnet and 10% on Haiku (medians); the rest was context. Shorter replies save the small part. The audit shows that split on your own sessions.
+So the bill isn't driven by how chatty the agent is. It's driven by **what it lets into its context, and how early**. In the [benchmark](#benchmark)'s runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was 7% of a run's cost on Sonnet and 10 to 11% on Haiku (medians); the rest was context. Shorter replies save the small part. The audit shows that split on your own sessions.
 
 tokenleak does two things:
 
@@ -68,7 +74,7 @@ curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skill
 curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 30d
 ```
 
-The report starts with where the money went (`cost split`: context, read from the cache or written to it, versus output), then every leak priced by what it cost.
+The report starts with where the money went (`cost split`: context, read from the cache or written to it, versus output), then every leak priced by its estimated context tax.
 
 Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak tokenleak` (or `pipx install git+https://github.com/Pazificateur69/tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
 
@@ -143,7 +149,7 @@ It also shows what's **always loaded**: your `CLAUDE.md` / `AGENTS.md` / memory 
 
 ### How it's computed
 
-For each tool result: **context tax = avoidable tokens × (cache write + every later call in the same context × cache read)**, using each provider's relative prices (Claude: cache read 0.1×, cache write 1.25–2×, output 5×; Codex/GPT-5: cached 0.1×, output 8×). *Avoidable* is conservative: only the part above a sane budget (e.g. a 6k-token read counts as 4k avoidable), the full size only for exact repeats. The **leak score** is the share of your total token cost that was avoidable. Dollar amounts come from Claude Code's own per-session cost, never from a price table we maintain.
+For each tool result: **context tax = avoidable tokens × (cache write + every later call in the same context × cache read)**, using each provider's relative prices (Claude: cache read 0.1×, cache write 1.25–2×, output 5×; Codex/GPT-5: cached 0.1×, output 8×). *Avoidable* is an estimate: only the part above a sane budget counts (e.g. a 6k-token read counts as 4k avoidable), the full size only for exact repeats. The audit can't know whether a big read was truly needed, so treat each finding as a suspect, not a verdict, and judge the trend with `--compare`. The **leak score** is the share of your total token cost that this estimate calls avoidable. Dollar amounts come from Claude Code's own per-session cost (prorated when a session started before the `--since` window), never from a price table we maintain.
 
 Everything stays on your machine: no network, no telemetry, ~1,500 lines of stdlib Python you can read in ten minutes.
 
@@ -172,13 +178,14 @@ Medians of the API-equivalent cost per run, as reported by Claude Code. On Sonne
 
 **Read it honestly.**
 - **Runs vary a lot.** The first Sonnet batch gave −40%, a second batch the same day −21%; the table pools both. Single runs swing by 2 to 4x, so read these as ranges, and run the audit on your own sessions before and after.
-- **Small models don't follow the rules on their own.** On Haiku 4.5 the rules alone changed nothing; the read guard (which stops whole reads of big files) brought −20% to −28%. On Sonnet, rules + guard did as well as the rules alone in the same batch (−22% vs −21%). That's why the plugin ships with the guard on.
+- **Haiku 4.5 didn't follow the rules on its own** (one small model, four tasks). The rules alone changed nothing; the read guard (which stops whole reads of big files) brought −20% to −28%. On Sonnet, rules + guard did as well as the rules alone in the same batch (−22% vs −21%). That's why the plugin ships with the guard on.
 - **The outline is a small gain, not a big one.** In batch 2 both guards ran side by side: −28% with the outline, −25% without, mostly on the data question (9 API calls instead of 12, $0.077 vs $0.086). Within the noise of 5 runs; it ships because it removes a search round-trip when the agent knows what it's looking for.
 - **One task was re-run.** In Haiku batch 2, `fix-build` first failed in every arm alike (3/5 each) because the sandbox blocked Apple's Python bytecode cache in `~/Library`. The harness now points that cache inside the run's folder, and the 15 `fix-build` runs were redone for all three arms; the table uses the redone runs.
+- **Speed is mixed.** A refused read costs a round-trip. Median wall time per run: on Sonnet 35 s without, 31 s with the rules, 38 s with rules + guard; on Haiku, batch 1 went from 27 s to 37 s with the guard, batch 2 from 32 s to 29 s.
 - **Tuning was kept apart from testing.** The rules were piloted first (v1, 30 runs: −23%) and changed once: one new rule (compute, don't read data) and two additions (check a file's size first; chain shell steps). The `add-feature` task was written before that change and never used to tune them: it shows the biggest gain.
 - Four small tasks on a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
 
-Every run, with the exact rules used, is in [bench/results](bench/results). Reproduce: `python3 bench/run.py --runs 5 --variants baseline,tokenleak,guard` (60 runs, about $13 of API-equivalent usage on Sonnet).
+Every run, with the exact rules used and its token usage by type (so the cost split can be rebuilt), is in [bench/results](bench/results). In October 2026 the `add-feature` checker was made stricter (a second category, and the default report unchanged); all 55 published `add-feature` runs were re-checked against it and still pass. Reproduce: `python3 bench/run.py --runs 5 --variants baseline,tokenleak,guard` (60 runs, about $13 of API-equivalent usage on Sonnet).
 
 ## The rules
 
@@ -205,9 +212,9 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 **What about rtk, caveman and the rest?** Complementary. rtk compresses command output at the shell level; output-style skills shorten replies. tokenleak changes *what the agent asks for* and measures the result on your real transcripts. Run the audit before and after anything you install.
 
-**What do the rules cost?** About 770 tokens, cached after the first call. One avoided full-file read pays for a whole session.
+**What do the rules cost?** About 770 tokens, re-sent on every call from the cache: over a 60-call session, about as much as 5.5k tokens of fresh input. Keeping one 6k-token test log down to 800 tokens at call 5 of that session saves about six times that.
 
-**Limitations.** Token sizes of individual results are estimated (~4 chars/token); session totals and costs are exact. "Avoidable" is a judgment, kept conservative. `serial-call` is a heuristic (it only flags a call whose target was already known and isn't mentioned in the previous result). Codex transcript formats change between versions; Claude Code is the best-tested path.
+**Limitations.** Token sizes of individual results are estimated (~4 chars/token); session token totals come from the usage the transcripts record, and dollars only from the sessions that record a cost. "Avoidable" is an estimate, not a measurement. `serial-call` is a heuristic (it only flags a call whose target was already known and isn't mentioned in the previous result). Codex transcript formats change between versions; Claude Code is the best-tested path.
 
 ## Listed on
 

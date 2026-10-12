@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
 .DS_Store
-bench/results/*/rules.md
 build/
 *.egg-info/

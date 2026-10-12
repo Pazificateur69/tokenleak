@@ -5,4 +5,6 @@
 | fix-build | guard | 5 | 5/5 | $0.087 ($0.075-0.101) | 380.3k | 2.0k | 8 | 5.0% |
 | add-feature | guard | 5 | 5/5 | $0.141 ($0.120-0.163) | 861.5k | 4.1k | 19 | 0.0% |
 
+Median wall time per run: guard 33s.
+Output share of cost (median per run, relative price units): guard 11.9%.
 Passed: guard 20/20. Model: claude-haiku-4-5-20251001. Runs that tried to leave the repo: 0.

@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -70,13 +71,34 @@ def check(task, work, answer, expected, snap):
         r = sh("./build.sh")
         return (r.returncode == 0 and "report: 2400 orders" in r.stdout
                 and digest([os.path.join(work, "build.sh")]) == snap["build"])
-    if task == "add-feature":
-        r = sh("python3 -m tools.report data/orders.csv --category toys")
-        lines = r.stdout.strip().splitlines()
-        orders = [l for l in lines if l.startswith("report: order ")]
-        return (r.returncode == 0 and bool(lines) and lines[-1].startswith(f"report: {expected['t4_toys']} orders")
-                and len(orders) == expected["t4_toys"] and all(" sku=TY-" in l for l in orders))
+    if task == "add-feature":  # two categories (so a hard-coded "toys" fails) and the default run unchanged
+        for arg, n, sku in ((" --category toys", expected["t4_toys"], " sku=TY-"),
+                            (" --category audio", expected["t4_by_cat"]["audio"], " sku=AU-"), ("", 2400, " sku=")):
+            r = sh("python3 -m tools.report data/orders.csv" + arg)
+            lines = r.stdout.strip().splitlines()
+            orders = [l for l in lines if l.startswith("report: order ")]
+            if not (r.returncode == 0 and lines and lines[-1].startswith(f"report: {n} orders")
+                    and len(orders) == n and all(sku in l for l in orders)):
+                return False
+        return True
     raise ValueError(task)
+
+
+def safe_check(*a):
+    try:
+        return check(*a)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        print(f"  checker failed: {e}", file=sys.stderr)
+        return False
+
+
+def output_share(r):
+    """Share of a run's cost (in relative price units) spent on what the model wrote."""
+    u = r.get("usage")
+    if not u:
+        return None
+    units = u["fresh"] + 1.25 * u["cache_write_5m"] + 2 * u["cache_write_1h"] + 0.1 * u["cache_read"] + 5 * u["output"]
+    return 100 * 5 * u["output"] / units if units else None
 
 
 def transcript_metrics(session_id):
@@ -103,6 +125,9 @@ def transcript_metrics(session_id):
         "context_tokens": sum(c.ctx_in for c in calls),
         "output_tokens": sum(c.out for c in calls),
         "max_context": max((c.ctx_in for c in calls), default=0),
+        "usage": {"fresh": sum(c.fresh for c in calls), "cache_write_5m": sum(c.c5m for c in calls),
+                  "cache_write_1h": sum(c.c1h for c in calls), "cache_read": sum(c.cread for c in calls),
+                  "output": sum(c.out for c in calls)},
         "leak_pct": round(100 * sum(f.cost for f in findings) / units, 2) if units else 0,
         "leaks": by_kind,
     }
@@ -150,7 +175,7 @@ def run_one(task, variant, i, args, outdir, rules):
     rec = {
         "task": task, "variant": variant, "run": i, "workdir": work,
         "wall_s": round(time.time() - t0, 1),
-        "pass": (not data.get("is_error")) and check(task, work, data.get("result"), expected, snap),
+        "pass": (not data.get("is_error")) and safe_check(task, work, data.get("result"), expected, snap),
         "cost_usd": data.get("total_cost_usd"),
         "num_turns": data.get("num_turns"),
         "session_id": data.get("session_id"),
@@ -183,15 +208,16 @@ def summarize(outdir):
             rs = [r for r in recs if r["task"] == task and r["variant"] == v]
             if not rs:
                 continue
-            c = med([r.get("cost_usd") or 0 for r in rs])
+            costs = [r["cost_usd"] for r in rs if r.get("cost_usd") is not None]
+            c = med(costs) if costs else 0.0
             x = med([r.get("context_tokens", 0) for r in rs])
             o = med([r.get("output_tokens", 0) for r in rs])
             tot[v]["cost"] += c
             tot[v]["ctx"] += x
             tot[v]["out"] += o
-            costs = [r.get("cost_usd") or 0 for r in rs]
+            missing = f", {len(rs) - len(costs)} without a cost" if len(costs) < len(rs) else ""
             lines.append(f"| {task} | {v} | {len(rs)} | {sum(r['pass'] for r in rs)}/{len(rs)} | "
-                         f"${c:.3f} (${min(costs):.3f}-{max(costs):.3f}) | {T.fmt(x)} | "
+                         f"${c:.3f} (${min(costs or [0]):.3f}-{max(costs or [0]):.3f}{missing}) | {T.fmt(x)} | "
                          f"{T.fmt(o)} | {med([r.get('api_calls', 0) for r in rs]):.0f} | "
                          f"{med([r.get('leak_pct', 0) for r in rs]):.1f}% |")
     passes = {v: f"{sum(r['pass'] for r in recs if r['variant'] == v)}/{sum(1 for r in recs if r['variant'] == v)}"
@@ -210,6 +236,12 @@ def summarize(outdir):
         lines.append(f"**Sum of medians, {v} vs baseline**: cost ${b['cost']:.3f} → ${k['cost']:.3f} ({delta('cost')}), "
                      f"context tokens {T.fmt(b['ctx'])} → {T.fmt(k['ctx'])} ({delta('ctx')}), "
                      f"output tokens {T.fmt(b['out'])} → {T.fmt(k['out'])} ({delta('out')}).")
+    walls = {v: med([r["wall_s"] for r in recs if r["variant"] == v]) for v in present}
+    shares = {v: [x for x in (output_share(r) for r in recs if r["variant"] == v) if x is not None] for v in present}
+    lines.append("Median wall time per run: " + ", ".join(f"{v} {walls[v]:.0f}s" for v in present) + ".")
+    if all(shares.values()):
+        lines.append("Output share of cost (median per run, relative price units): "
+                     + ", ".join(f"{v} {med(shares[v]):.1f}%" for v in present) + ".")
     lines.append(f"Passed: {', '.join(f'{v} {passes[v]}' for v in present)}. Model: {', '.join(models) or '?'}. "
                  f"Runs that tried to leave the repo: {sum(1 for r in recs if r.get('escaped'))}.")
     text = "\n".join(lines) + "\n"
@@ -227,6 +259,8 @@ def export(src, dest):
         rec["answer"] = rec.get("answer", "").replace(work, "<repo>")
         with open(os.path.join(dest, os.path.basename(p)), "w") as f:
             json.dump(rec, f, indent=2)
+    if os.path.exists(os.path.join(src, "rules.md")):
+        shutil.copy(os.path.join(src, "rules.md"), os.path.join(dest, "rules.md"))
     summarize(dest)
 
 

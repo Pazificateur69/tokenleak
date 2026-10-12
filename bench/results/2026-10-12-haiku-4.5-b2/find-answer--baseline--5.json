@@ -18,5 +18,12 @@
     "big-read": 1,
     "serial-call": 2
   },
-  "escaped": false
+  "escaped": false,
+  "usage": {
+    "fresh": 82,
+    "cache_write_5m": 0,
+    "cache_write_1h": 32883,
+    "cache_read": 474924,
+    "output": 1616
+  }
 }

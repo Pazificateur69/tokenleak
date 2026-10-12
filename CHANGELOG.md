@@ -2,6 +2,24 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.5.1 (2026-10-12)
+From an outside review (OpenAI Codex, read-only), each point checked against the code before changing it.
+
+### Fixed
+- `tokenleak suggest` advice no longer pipes tests and builds into `tail`, which hid their exit status: it writes the log, prints `exit=`, then shows the tail. Each tool gets its own quiet flag (`jest --silent`, `vitest --reporter=dot`, `pip -q`; npm keeps `--silent`).
+- `--since`: a session that started before the window kept its whole recorded cost; it now keeps the window's share. The spend line says how many sessions record a cost.
+- Read guard: an `offset` without `limit` no longer bypasses it (the Read tool still returns up to 2,000 lines); only a positive `limit` does. Files over 64 MB get an estimated line count instead of a full scan inside the hook.
+- Codex: later output chunks of the same call were dropped; they now add up. Claude Code: a tool call logged twice counts once.
+- A folder plus a file inside it no longer counts that transcript twice; `--agent` now filters explicit paths too.
+- A report with no leaks still shows what is always loaded (often the cheapest win).
+- `--json --redact` drops session ids.
+
+### Benchmark and docs
+- Every published run now carries its token usage by type; summaries show median wall time and the output share of cost, so the "output is 7% (Sonnet) to 10-11% (Haiku) of the bill" figure can be rebuilt from the repo.
+- The `add-feature` checker is stricter (a second category, and the default report unchanged). All 55 published `add-feature` runs were re-checked: all pass.
+- Harness: a checker that crashes or times out records a failed run instead of stopping the benchmark; a run without a cost is reported as missing, never as $0; exports keep the exact rules file.
+- README, site and privacy page: the headline says the −32% is with the rules; findings are called estimates, not costs; the rules' own cost is computed instead of claimed; wall time is published (mixed: the guard was slower in one Haiku batch, faster in the other); "Try it first" one-liner at the top.
+
 ## 1.5.0 (2026-10-12)
 ### New
 - **The read guard hands back an outline.** When it stops a whole read of a big code or Markdown file, the agent gets the file's definitions or headings with line numbers (outermost first, at most 60 rows; a long top level is sampled across the file), so it can `Read` just that range. CSV files get their header; logs and data files get none. Tested end to end with the real plugin: denied, then one `Read` at the right offset.
