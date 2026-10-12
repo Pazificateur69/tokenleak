@@ -76,9 +76,9 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewB
   <text class="meter mono on-leak" x="0" y="118">252,000</text>
   <text class="meter mono on-lean" x="0" y="118">16,800</text>
   <text class="t2" x="0" y="140">tokens</text>
-  <text class="cap" x="0" y="196">Illustration. Measured on 40 real runs:</text>
-  <text class="t1" x="0" y="230" style="fill:#ffc46b">&#8722;40% cost</text>
-  <text class="cap" x="0" y="252">same 20/20 pass rate</text>
+  <text class="cap" x="0" y="196">Illustration. Measured on 80 runs (Sonnet 5):</text>
+  <text class="t1" x="0" y="230" style="fill:#ffc46b">&#8722;32% cost</text>
+  <text class="cap" x="0" y="252">same 40/40 pass rate</text>
 </g>
 <text class="cap" x="40" y="{H - 34}">system prompt + tools</text><rect class="sys" x="28" y="{H - 43}" width="8" height="8" rx="2"/>
 <text class="cap" x="200" y="{H - 34}">conversation</text><rect class="conv" x="188" y="{H - 43}" width="8" height="8" rx="2"/>

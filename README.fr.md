@@ -7,7 +7,7 @@ Rien à voir avec des clés API qui fuient : il s'agit des tokens que ton agent 
 
 <p align="center"><a href="README.md">English</a></p>
 
-**−40 % de coût sur un benchmark A/B de 40 runs, même taux de réussite (20/20).** Méthode et limites : [section Benchmark](README.md#benchmark).
+**−32 % de coût sur 80 runs A/B avec Sonnet 5, même taux de réussite (40/40) ; −20 % sur Haiku 4.5 grâce au garde-fou de lecture.** Méthode et limites : [section Benchmark](README.md#benchmark).
 
 ## Pourquoi
 

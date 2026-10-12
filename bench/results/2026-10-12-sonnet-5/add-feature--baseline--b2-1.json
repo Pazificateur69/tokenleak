@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 45.7,
+  "pass": true,
+  "cost_usd": 0.46446919999999997,
+  "num_turns": 12,
+  "session_id": "36f9dacb-30b0-444f-a883-2cd0f4f76f0a",
+  "answer": "Both work and end with the expected `report: N orders, revenue ... EUR` summary line.\n\nChanges to `tools/report.py`:\n- Added `--category NAME` CLI option (via `argparse`) that filters orders to only those whose product's category matches.\n- Fixed a pre-existing bug where it called `shipping.ship_cost_for(product)`, a method that doesn't exist \u2014 the real function is `shipping.ship_cost`. Without this fix the script crashed on every run, category filter or not.",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 945694,
+  "output_tokens": 3100,
+  "max_context": 107371,
+  "leak_pct": 20.01,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b2"
+}

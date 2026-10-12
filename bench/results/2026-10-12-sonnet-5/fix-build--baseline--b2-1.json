@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 39.9,
+  "pass": true,
+  "cost_usd": 0.5789053999999999,
+  "num_turns": 14,
+  "session_id": "49d4b0d1-43dc-4ca6-a543-5c69a82ae638",
+  "answer": "Build passes now. The cause was a typo in `tools/report.py`: it called `shipping.ship_cost_for(product)`, a function that doesn't exist \u2014 `shipping.py` only defines `ship_cost(product)` (which `cart.py` already uses correctly). Fixed by calling the correct function name.",
+  "model": "claude-sonnet-5",
+  "api_calls": 8,
+  "context_tokens": 697703,
+  "output_tokens": 2620,
+  "max_context": 108722,
+  "leak_pct": 14.27,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b2"
+}

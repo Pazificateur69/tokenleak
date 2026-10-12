@@ -9,6 +9,10 @@ All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 - The injected rules stop before the skill's Audit section (only useful with the script at hand): about 770 tokens instead of 950.
 - `bench/run.py --variants baseline,tokenleak,guard`, and a Haiku 4.5 benchmark in `bench/results`.
 
+### Benchmark, corrected
+- A second Sonnet 5 batch (same day, same tasks) gave −21% where the first gave −40%. The README and the site now show both batches pooled: **−32%** over 80 runs, 40/40 passed in both arms, −51% on the held-out task.
+- Haiku 4.5: the rules alone changed nothing (−1%); with the read guard, −20% (60 runs).
+
 ### Fixed (from an independent review, each with a reproduction)
 - One malformed tool input (e.g. a `Read` whose `offset` is a list) crashed the whole audit; inputs are now type-checked and a bad transcript is skipped with a note.
 - Windows: the report and `--share` crashed when piped (cp1252); output is now UTF-8.

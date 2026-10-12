@@ -18,7 +18,7 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 
 <p align="center"><img src="assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
-**−40% cost on a 40-run A/B benchmark, same pass rate (20/20).** [Details](#benchmark).
+**−32% cost over 80 A/B runs on Sonnet 5, same pass rate (40/40). −20% on Haiku 4.5 with the read guard.** [Details](#benchmark).
 
 ## Why
 
@@ -40,7 +40,7 @@ tokenleak does two things:
 /plugin install tokenleak@tokenleak
 ```
 
-**Codex (plugin).** Same rules at session start and in subagents, plus the skill:
+**Codex (plugin).** Same rules at session start (and in subagents where your Codex version fires that hook), plus the skill:
 
 ```bash
 codex plugin marketplace add Pazificateur69/tokenleak
@@ -147,24 +147,35 @@ Everything stays on your machine: no network, no telemetry, ~1,400 lines of stdl
 
 ## Benchmark
 
-A/B test in Claude Code (`claude -p`, Sonnet 5): same prompt, a fresh copy of the same small repo for every run, 5 runs per arm. The **only** difference is the tokenleak rules appended to the system prompt (what the plugin injects). Every run is checked by a script: tests green, build passing, exact answer, feature working.
+A/B tests in Claude Code (`claude -p`): same prompt, a fresh copy of the same small repo for every run. The **only** difference is what tokenleak adds: the rules in the system prompt (what the plugin injects), and in the `guard` arm the plugin's read guard too. Every run is checked by a script: tests green, build passing, exact answer, feature working.
 
-| task | without | with tokenleak | change | passed |
+**Sonnet 5**, 10 runs per task and arm (two batches, 80 runs):
+
+| task | without | with the rules | change | passed |
 |---|---|---|---|---|
-| fix a failing test (chatty test logs) | $0.140 | $0.140 | 0% | 5/5 · 5/5 |
-| answer a question about data in a big module | $0.206 | $0.160 | **−22%** | 5/5 · 5/5 |
-| fix a build buried in 600 lines of output | $0.267 | $0.159 | **−40%** | 5/5 · 5/5 |
-| add a feature *(held out, see below)* | $0.459 | $0.184 | **−60%** | 5/5 · 5/5 |
-| **total** | **$1.07** | **$0.64** | **−40%** | **20/20 · 20/20** |
+| fix a failing test (chatty test logs) | $0.148 | $0.140 | −5% | 10/10 · 10/10 |
+| answer a question about data in a big module | $0.206 | $0.160 | **−22%** | 10/10 · 10/10 |
+| fix a build buried in 600 lines of output | $0.270 | $0.206 | **−24%** | 10/10 · 10/10 |
+| add a feature *(held out, see below)* | $0.450 | $0.222 | **−51%** | 10/10 · 10/10 |
+| **total** | **$1.07** | **$0.73** | **−32%** | **40/40 · 40/40** |
 
-Median API-equivalent cost per run, as reported by Claude Code. On every task where it helped, the most expensive tokenleak run cost less than the cheapest run without it. Context tokens −28%, output tokens −17%. The screenshot under [The audit](#the-audit) is the audit of the 20 runs *without* the rules.
+**Haiku 4.5**, 5 runs per task and arm (60 runs):
+
+| | without | rules only | rules + read guard |
+|---|---|---|---|
+| total | $0.513 | $0.505 (−1%) | **$0.408 (−20%)** |
+| add a feature | $0.228 | $0.214 | **$0.124 (−46%)** |
+| passed | 20/20 | 20/20 | 20/20 |
+
+Medians of the API-equivalent cost per run, as reported by Claude Code. On Sonnet, context tokens −17% and output tokens −11%. The screenshot under [The audit](#the-audit) is the audit of 20 runs *without* the rules.
 
 **Read it honestly.**
-- The rules were piloted first (v1, 30 runs: −23%, 15/15 vs 15/15). Reading those transcripts led to one new rule (compute, don't read data) and two additions (check a file's size before opening it; chain shell steps into one command). So that this isn't tuning on the test, a fourth task, `add-feature`, was written before the change and never used to tune the rules: it shows the biggest gain. Both runs, with the exact rules used, are in [bench/results](bench/results).
-- One model, four small tasks, a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Your numbers will differ: run the audit on your own sessions before and after.
-- Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
+- **Runs vary a lot.** The first Sonnet batch gave −40%, a second batch the same day −21%; the table pools both. Single runs swing by 2 to 4x, so read these as ranges, and run the audit on your own sessions before and after.
+- **Small models don't follow the rules on their own.** On Haiku 4.5 the rules alone changed nothing; the read guard (which stops whole reads of big files) brought −20%. On Sonnet, rules + guard did as well as the rules alone in the same batch (−22% vs −21%). That's why the plugin ships with the guard on.
+- **Tuning was kept apart from testing.** The rules were piloted first (v1, 30 runs: −23%) and changed once: one new rule (compute, don't read data) and two additions (check a file's size first; chain shell steps). The `add-feature` task was written before that change and never used to tune them: it shows the biggest gain.
+- Four small tasks on a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
 
-Reproduce: `python3 bench/run.py --runs 5` (40 runs, about $9 of API-equivalent usage).
+Every run, with the exact rules used, is in [bench/results](bench/results). Reproduce: `python3 bench/run.py --runs 5 --variants baseline,tokenleak,guard` (60 runs, about $13 of API-equivalent usage on Sonnet).
 
 ## The rules
 
@@ -185,7 +196,7 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 ## FAQ
 
-**Does it make the agent worse?** It shouldn't, and the benchmark checks every run for correctness. The guardrails are explicit: a leak is cheaper than a wrong fix.
+**Does it make the agent worse?** Not in the benchmark: every run is checked by a script, and the pass rate was the same in every arm (40/40 on Sonnet, 20/20 on Haiku). The guardrails are explicit: a leak is cheaper than a wrong fix.
 
 **My agent already does some of this.** Good agents do. Claude Code, for one, already blocks re-reading an unchanged file; the audit counts those blocked attempts as wasted round-trips. The audit tells you how much is left on your own sessions, not on a demo.
 

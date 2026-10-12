@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 44.1,
+  "pass": true,
+  "cost_usd": 0.4162482,
+  "num_turns": 14,
+  "session_id": "1e53deb6-e997-4419-b220-18f38b89f5c3",
+  "answer": "Build now passes. The failure was a single mismatched function name: `tools/report.py` called `shipping.ship_cost_for()`, but `shopcart/shipping.py` only exports `ship_cost()` (which `shopcart/cart.py` already used correctly). I fixed the call site in `tools/report.py`, and `./build.sh` now completes with `== build ok`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 8,
+  "context_tokens": 698678,
+  "output_tokens": 2568,
+  "max_context": 109084,
+  "leak_pct": 20.68,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b1"
+}

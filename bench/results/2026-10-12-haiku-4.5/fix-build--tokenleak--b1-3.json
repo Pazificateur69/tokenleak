@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 3,
+  "wall_s": 27.7,
+  "pass": true,
+  "cost_usd": 0.07866690000000001,
+  "num_turns": 10,
+  "session_id": "f19a690b-e793-4ac1-bb92-1e15c3c0227f",
+  "answer": "Perfect! The build now passes. The issue was in `tools/report.py` where it was calling `shipping.ship_cost_for()`, which doesn't exist. The correct function name in `shipping.py` is `ship_cost()`. I fixed that one-line error and the build completes successfully with the message \"== build ok\".",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 7,
+  "context_tokens": 334225,
+  "output_tokens": 1918,
+  "max_context": 51800,
+  "leak_pct": 5.43,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

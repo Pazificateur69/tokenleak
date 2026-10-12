@@ -1,0 +1,23 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 4,
+  "wall_s": 38.6,
+  "pass": true,
+  "cost_usd": 0.24796340000000003,
+  "num_turns": 11,
+  "session_id": "70fb1c85-d81f-41b3-aff8-972881ec7c7a",
+  "answer": "Build passes now. The bug was `tools/report.py` calling `shipping.ship_cost_for(product)`, a function that doesn't exist \u2014 the module only defines `ship_cost`. Fixed the call site to use `shipping.ship_cost(product)`, matching usage elsewhere (e.g. `shopcart/cart.py`). `./build.sh` now exits 0.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 572928,
+  "output_tokens": 1827,
+  "max_context": 73375,
+  "leak_pct": 8.51,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tokenleak: stop paying the context tax</title>
-<meta name="description" content="Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks in your Claude Code and Codex sessions and plugs them. -40% cost on a 40-run A/B benchmark.">
+<meta name="description" content="Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks in your Claude Code and Codex sessions and plugs them. -32% cost over 80 A/B runs, same pass rate.">
 <meta name="theme-color" content="#09090b">
 <meta name="color-scheme" content="dark">
 <meta property="og:title" content="tokenleak: stop paying the context tax">
-<meta property="og:description" content="Lean-context rules for any coding agent, plus an audit of your own Claude Code and Codex sessions. -40% cost on a 40-run A/B benchmark, same pass rate.">
+<meta property="og:description" content="Lean-context rules for any coding agent, plus an audit of your own Claude Code and Codex sessions. -32% cost over 80 A/B runs, same pass rate.">
 <meta property="og:image" content="https://pazificateur69.github.io/tokenleak/og.png">
 <meta property="og:url" content="https://pazificateur69.github.io/tokenleak/">
 <meta property="og:type" content="website">
@@ -16,7 +16,7 @@
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=17">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -80,9 +80,9 @@
 
   <section class="proof" aria-label="Benchmark results in brief">
     <div class="wrap proof-row">
-      <div class="stat reveal"><strong data-count="-40" data-suffix="%">&minus;40%</strong><span>cost on a 40-run A/B benchmark in Claude Code</span></div>
-      <div class="stat reveal"><strong data-count="20" data-suffix="/20">20/20</strong><span>runs passed, with and without the rules</span></div>
-      <div class="stat reveal"><strong data-count="-60" data-suffix="%">&minus;60%</strong><span>on the task held out from tuning the rules</span></div>
+      <div class="stat reveal"><strong data-count="-32" data-suffix="%">&minus;32%</strong><span>cost over 80 A/B runs in Claude Code (Sonnet 5)</span></div>
+      <div class="stat reveal"><strong data-count="40" data-suffix="/40">40/40</strong><span>runs passed, with and without the rules</span></div>
+      <div class="stat reveal"><strong data-count="-51" data-suffix="%">&minus;51%</strong><span>on the task held out from tuning the rules</span></div>
     </div>
   </section>
 
@@ -164,7 +164,7 @@
         </article>
         <article class="cell plugin spot reveal">
           <h3>Everywhere the agent works</h3>
-          <p>The plugin loads the rules at session start, after every compaction and in every subagent. In Claude Code and Codex.</p>
+          <p>In Claude Code the plugin loads the rules at session start, after every compaction and in every subagent, and stops whole reads of big files. Codex gets the rules at session start.</p>
         </article>
       </div>
     </div>
@@ -193,21 +193,21 @@
   <section class="bench" id="benchmark">
     <div class="wrap">
       <h2>Measured, not promised.</h2>
-      <p class="sub">Same prompt, a fresh copy of the same repo for every run, five runs per arm. The only difference is the rules in the system prompt. A script checks every result.</p>
+      <p class="sub">Same prompt, a fresh copy of the same repo for every run, ten runs per task and arm in two batches. The only difference is the rules in the system prompt. A script checks every result.</p>
       <figure class="chart glass reveal">
         <div class="chart-head">
           <div>
             <p class="total-label">Sum of medians, 4 tasks</p>
-            <p class="total"><span>$1.07</span><span class="to" aria-label="to">&rarr;</span><span class="hi">$0.64</span></p>
+            <p class="total"><span>$1.07</span><span class="to" aria-label="to">&rarr;</span><span class="hi">$0.73</span></p>
           </div>
-          <span class="big-pill">&minus;40% cost</span>
+          <span class="big-pill">&minus;32% cost</span>
         </div>
         <div class="legend" aria-hidden="true">
           <span><i class="sw base"></i>Without the rules</span>
           <span><i class="sw lean"></i>With tokenleak</span>
         </div>
         <div id="chart"></div>
-        <figcaption>Cost per run in Claude Code (Sonnet 5), as reported by Claude Code. Small dots are single runs, large dots are medians.</figcaption>
+        <figcaption>Cost per run in Claude Code (Sonnet 5), as reported by Claude Code. Small dots are single runs, large dots are medians of 10.</figcaption>
         <details class="as-table">
           <summary>View as table</summary>
           <table>
@@ -217,8 +217,8 @@
         </details>
       </figure>
       <ul class="honest">
-        <li>The rules were piloted first (30 runs, &minus;23%). After reading those transcripts one rule was added and two were extended, so the feature task was written beforehand and never used for tuning.</li>
-        <li>One model and four small tasks on a synthetic repo built around what leaks in real ones. Your numbers will differ: run the audit before and after.</li>
+        <li>Two batches on the same day gave &minus;40% and &minus;21%: runs vary a lot, so these are medians of 10. The rules were piloted first and adjusted once; the feature task was written beforehand and never used for tuning.</li>
+        <li>On Haiku 4.5 the rules alone changed nothing (&minus;1%): small models follow them less. The plugin&rsquo;s read guard, which stops whole reads of big files, brought it to &minus;20%. Four small tasks on a synthetic repo: run the audit on your own sessions.</li>
         <li>Every run, the exact rules used and the harness are <a href="https://github.com/Pazificateur69/tokenleak/tree/main/bench">in the repo</a>.</li>
       </ul>
     </div>
@@ -244,7 +244,7 @@
 /plugin install tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
         <div class="panel" role="tabpanel" id="p-codex" aria-labelledby="t-codex" hidden>
-          <p>Plugin: rules at session start and in subagents. Then open <code>/hooks</code> to trust its hook.</p>
+          <p>Plugin: rules at session start, plus the skill. Then open <code>/hooks</code> to trust its hook.</p>
           <div class="cmd"><pre><code>codex plugin marketplace add Pazificateur69/tokenleak
 codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
@@ -270,7 +270,7 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
       <div class="qs">
         <details>
           <summary>Does it make the agent worse?</summary>
-          <p>Not in the benchmark: 20 of 20 runs passed in both arms, each checked by a script. The rules forbid saving tokens by guessing a file, hiding the error or skipping verification.</p>
+          <p>Not in the benchmark: 40 of 40 runs passed in both arms on Sonnet 5, and 20 of 20 on Haiku 4.5, each checked by a script. The rules forbid saving tokens by guessing a file, hiding the error or skipping verification.</p>
         </details>
         <details>
           <summary>Isn't shorter output enough?</summary>
@@ -305,6 +305,6 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js?v=17" defer></script>
+<script src="app.js?v=18" defer></script>
 </body>
 </html>

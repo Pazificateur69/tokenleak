@@ -1,0 +1,23 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 57.3,
+  "pass": true,
+  "cost_usd": 0.2898848,
+  "num_turns": 12,
+  "session_id": "f4ee5bc1-5d1c-4f33-b0d2-4c985aa718f8",
+  "answer": "`build.sh` now passes end-to-end (compile, lint, report all succeed, exit 0).\n\n**Root cause:** `tools/report.py` called `shipping.ship_cost_for(product)`, but the shipping module only defines `ship_cost(product)` (which `shopcart/cart.py` and all of `tests/test_cart.py` already use correctly). Fixed the one call site in `tools/report.py` to use `shipping.ship_cost`.\n\nNote: while verifying, I ran the existing unit test suite (not part of `build.sh`) and found one pre-existing, unrelated failure \u2014",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 702196,
+  "output_tokens": 3248,
+  "max_context": 73853,
+  "leak_pct": 7.82,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

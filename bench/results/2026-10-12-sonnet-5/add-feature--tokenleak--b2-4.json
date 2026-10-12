@@ -1,0 +1,23 @@
+{
+  "task": "add-feature",
+  "variant": "tokenleak",
+  "run": 4,
+  "wall_s": 43.9,
+  "pass": true,
+  "cost_usd": 0.3373238,
+  "num_turns": 12,
+  "session_id": "71355011-1360-4557-9d39-c09552285b38",
+  "answer": "Both work: the filtered run only shows `sku=TY-*` orders and ends with the usual summary line, and the unfiltered run still processes all 2400 orders.\n\nSummary: added `--category NAME` to `tools/report.py` (filters on `product[\"category\"]`), and fixed a pre-existing bug where it called the nonexistent `shipping.ship_cost_for` instead of `shipping.ship_cost` \u2014 without that fix the command couldn't run at all.",
+  "model": "claude-sonnet-5",
+  "api_calls": 12,
+  "context_tokens": 853345,
+  "output_tokens": 2323,
+  "max_context": 80824,
+  "leak_pct": 19.98,
+  "leaks": {
+    "big-read": 1,
+    "serial-call": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

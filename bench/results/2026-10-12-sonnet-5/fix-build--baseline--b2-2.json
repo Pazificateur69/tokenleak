@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 43.4,
+  "pass": true,
+  "cost_usd": 0.21906720000000002,
+  "num_turns": 11,
+  "session_id": "729c897f-3f64-4b2a-9192-fcee46fc6ef9",
+  "answer": "Build passes. The cause was `tools/report.py` calling `shipping.ship_cost_for(product)`, a function that doesn't exist \u2014 the real function (used consistently elsewhere, e.g. `shopcart/cart.py` and all of `tests/test_cart.py`) is `shipping.ship_cost(product)`. Fixed the call site in `tools/report.py`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 534507,
+  "output_tokens": 2058,
+  "max_context": 67176,
+  "leak_pct": 5.77,
+  "leaks": {
+    "wide-search": 1
+  },
+  "escaped": true,
+  "batch": "b2"
+}

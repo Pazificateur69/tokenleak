@@ -1,0 +1,22 @@
+{
+  "task": "find-answer",
+  "variant": "baseline",
+  "run": 5,
+  "wall_s": 19.3,
+  "pass": true,
+  "cost_usd": 0.2113492,
+  "num_turns": 7,
+  "session_id": "90fd2210-54e2-4303-b182-2d91dd437e72",
+  "answer": "9",
+  "model": "claude-sonnet-5",
+  "api_calls": 6,
+  "context_tokens": 367142,
+  "output_tokens": 800,
+  "max_context": 77267,
+  "leak_pct": 19.97,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

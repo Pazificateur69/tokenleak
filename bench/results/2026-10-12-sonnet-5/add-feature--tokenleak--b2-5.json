@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "tokenleak",
+  "run": 5,
+  "wall_s": 48.3,
+  "pass": true,
+  "cost_usd": 0.33287039999999996,
+  "num_turns": 11,
+  "session_id": "fe21aa48-27b6-413f-99b7-18c31d720a5d",
+  "answer": "Works both with `--category toys` (filters to 300 matching orders) and without it (full 2400-order run, unchanged behavior).\n\nAdded `--category` filtering to `tools/report.py`, and fixed a pre-existing bug where it called the nonexistent `shipping.ship_cost_for` instead of `shipping.ship_cost` \u2014 without that fix the command couldn't run at all.",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 798772,
+  "output_tokens": 2857,
+  "max_context": 81120,
+  "leak_pct": 15.56,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

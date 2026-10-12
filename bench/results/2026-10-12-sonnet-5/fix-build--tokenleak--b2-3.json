@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 3,
+  "wall_s": 24.4,
+  "pass": true,
+  "cost_usd": 0.1942154,
+  "num_turns": 9,
+  "session_id": "8b178fab-36a2-4313-b669-088a920dc950",
+  "answer": "Build passes. The fix: `tools/report.py` called a nonexistent `shipping.ship_cost_for`, while the module, `cart.py`, and all tests use `shipping.ship_cost` \u2014 corrected the caller to match the real API.",
+  "model": "claude-sonnet-5",
+  "api_calls": 8,
+  "context_tokens": 476777,
+  "output_tokens": 1039,
+  "max_context": 66366,
+  "leak_pct": 6.46,
+  "leaks": {
+    "wide-search": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

@@ -1,0 +1,24 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 5,
+  "wall_s": 60.0,
+  "pass": true,
+  "cost_usd": 0.3142756,
+  "num_turns": 13,
+  "session_id": "7247a21d-d9bd-4d12-ad29-cc3a6ae6436c",
+  "answer": "Build passes now. The cause was a typo in `tools/report.py`: it called `shipping.ship_cost_for(product)`, but the actual function is `shipping.ship_cost` (used consistently by `cart.py` and all tests). Fixed by correcting the call site.",
+  "model": "claude-sonnet-5",
+  "api_calls": 13,
+  "context_tokens": 833312,
+  "output_tokens": 2776,
+  "max_context": 74620,
+  "leak_pct": 11.41,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1,
+    "serial-call": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

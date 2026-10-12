@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 5,
+  "wall_s": 47.0,
+  "pass": true,
+  "cost_usd": 0.44026439999999994,
+  "num_turns": 11,
+  "session_id": "8b54f042-f633-40a9-ba50-fc8355abe7cf",
+  "answer": "Both work correctly: filtered run only includes toys orders (confirmed by SKU prefix `TY-`) and ends with the usual summary line, and the unfiltered run still processes all 2400 orders as before.\n\nAdded `--category NAME` to `tools/report.py` which filters orders by product category before computing revenue, and fixed a pre-existing bug where it called a nonexistent `shipping.ship_cost_for` instead of `shipping.ship_cost` (the command couldn't run at all before this fix).",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 838557,
+  "output_tokens": 3108,
+  "max_context": 106620,
+  "leak_pct": 20.33,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b2"
+}

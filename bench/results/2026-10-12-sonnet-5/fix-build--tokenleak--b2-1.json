@@ -1,0 +1,23 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 1,
+  "wall_s": 48.9,
+  "pass": true,
+  "cost_usd": 0.23425620000000003,
+  "num_turns": 10,
+  "session_id": "745f8286-73e7-4e9e-9f4a-29065316ff9b",
+  "answer": "Build passes now. The bug was a typo call in `tools/report.py:15` (`shipping.ship_cost_for`) that didn't match the actual function `shipping.ship_cost` defined in `shopcart/shipping.py` \u2014 every other caller (cart.py, all tests) used the correct name. Fixed the call site.",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 599605,
+  "output_tokens": 2088,
+  "max_context": 67676,
+  "leak_pct": 10.39,
+  "leaks": {
+    "wide-search": 1,
+    "serial-call": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

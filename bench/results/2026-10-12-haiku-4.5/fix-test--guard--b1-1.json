@@ -1,0 +1,22 @@
+{
+  "task": "fix-test",
+  "variant": "guard",
+  "run": 1,
+  "wall_s": 39.5,
+  "pass": true,
+  "cost_usd": 0.09917519999999999,
+  "num_turns": 11,
+  "session_id": "a4011f62-ab79-42d0-85d9-5004904b448d",
+  "answer": "Perfect! All tests are now passing. \n\n**Root cause:** The `bulk_discount()` function in `shopcart/pricing.py` was using `>` (strictly greater than) instead of `>=` (greater than or equal to) when checking if the quantity meets the bulk discount threshold.\n\n**The fix:** Changed line 14 from:\n```python\nif qty > BULK_THRESHOLD:\n```\nto:\n```python\nif qty >= BULK_THRESHOLD:\n```\n\nThis ensures the 10% bulk discount is applied when buying exactly 10 units or more, not just strictly more than 10 units. Th",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 10,
+  "context_tokens": 481405,
+  "output_tokens": 2930,
+  "max_context": 52173,
+  "leak_pct": 4.83,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

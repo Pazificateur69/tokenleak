@@ -1,0 +1,22 @@
+{
+  "task": "fix-test",
+  "variant": "guard",
+  "run": 2,
+  "wall_s": 41.5,
+  "pass": true,
+  "cost_usd": 0.11050070000000001,
+  "num_turns": 11,
+  "session_id": "a6029c43-8437-4e02-85d4-0cd7fa7f9037",
+  "answer": "Perfect! All tests pass now. The root cause was a guard condition error in the `bulk_discount` function at `shopcart/pricing.py:14`. The condition was using `>` (strictly greater than) when it should have been `>=` (greater than or equal to). This meant the bulk discount was not being applied at exactly the threshold quantity of 10 units.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 11,
+  "context_tokens": 551235,
+  "output_tokens": 2928,
+  "max_context": 54460,
+  "leak_pct": 4.64,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

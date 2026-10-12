@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 5,
+  "wall_s": 24.3,
+  "pass": true,
+  "cost_usd": 0.0863087,
+  "num_turns": 9,
+  "session_id": "a8b7e4c2-f6a1-410f-8e47-f2e7f964d788",
+  "answer": "Build fixed! The issue was on line 15 of `tools/report.py` \u2014 it was calling a non-existent function `shipping.ship_cost_for()` when the actual function in the shipping module is named `shipping.ship_cost()`. Changed the function call and the build now passes.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 9,
+  "context_tokens": 429295,
+  "output_tokens": 1669,
+  "max_context": 51466,
+  "leak_pct": 5.35,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

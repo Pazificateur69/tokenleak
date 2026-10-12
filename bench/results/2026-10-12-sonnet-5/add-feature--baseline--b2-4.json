@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 4,
+  "wall_s": 43.7,
+  "pass": true,
+  "cost_usd": 0.298256,
+  "num_turns": 10,
+  "session_id": "0e24739f-836b-4b73-9ded-bf9388e92786",
+  "answer": "Both work now and end with the expected summary line. Also ran a quick sanity check with the catalog to confirm `--category toys` only matches toys SKUs (TY-* prefix skus shown, all toys), and the unfiltered run still produces the full 2400-order report.\n\nSummary: added `--category` to `tools/report.py` via argparse, filtering orders by `product[\"category\"]` before accumulating totals. Along the way I fixed a pre-existing bug \u2014 the script called `shipping.ship_cost_for(product)`, but that functi",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 636977,
+  "output_tokens": 2647,
+  "max_context": 81072,
+  "leak_pct": 16.08,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

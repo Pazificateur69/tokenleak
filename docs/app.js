@@ -194,14 +194,17 @@ function renderTax() {
 ["size", "at", "len"].forEach((id) => $(id).addEventListener("input", renderTax));
 renderTax();
 
-// Benchmark: cost per run (USD, as reported by Claude Code), 5 runs per arm. Source: bench/results/2026-10-12-final-rules-v1.1
+// Benchmark: cost per run (USD, as reported by Claude Code), Sonnet 5, 10 runs per arm in two batches. Source: bench/results/2026-10-12-sonnet-5
 const BENCH = [
-  { task: "Fix a failing test", note: "chatty test logs", base: [0.126, 0.129, 0.14, 0.142, 0.143], lean: [0.131, 0.14, 0.14, 0.141, 0.15] },
-  { task: "Answer a data question", note: "big data module", base: [0.201, 0.202, 0.206, 0.208, 0.211], lean: [0.148, 0.149, 0.16, 0.169, 0.183] },
-  { task: "Fix a noisy build", note: "600 lines of output", base: [0.252, 0.266, 0.267, 0.416, 0.446], lean: [0.144, 0.153, 0.159, 0.218, 0.232] },
-  { task: "Add a feature", note: "held out from tuning", base: [0.288, 0.421, 0.459, 0.466, 0.492], lean: [0.164, 0.172, 0.184, 0.195, 0.225] },
+  { task: "Fix a failing test", note: "chatty test logs", base: [0.126, 0.129, 0.14, 0.142, 0.143, 0.153, 0.154, 0.157, 0.159, 0.525], lean: [0.124, 0.13, 0.131, 0.137, 0.14, 0.14, 0.141, 0.15, 0.156, 0.157] },
+  { task: "Answer a data question", note: "big data module", base: [0.096, 0.201, 0.202, 0.205, 0.205, 0.206, 0.208, 0.211, 0.22, 0.387], lean: [0.146, 0.148, 0.149, 0.151, 0.16, 0.16, 0.163, 0.167, 0.169, 0.183] },
+  { task: "Fix a noisy build", note: "600 lines of output", base: [0.219, 0.252, 0.261, 0.266, 0.267, 0.272, 0.29, 0.416, 0.446, 0.579], lean: [0.144, 0.153, 0.159, 0.16, 0.194, 0.218, 0.221, 0.232, 0.232, 0.234] },
+  { task: "Add a feature", note: "held out from tuning", base: [0.288, 0.298, 0.299, 0.421, 0.44, 0.459, 0.464, 0.466, 0.482, 0.492], lean: [0.164, 0.172, 0.184, 0.195, 0.219, 0.225, 0.266, 0.333, 0.337, 0.375] },
 ];
-const median = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
+const median = (a) => {
+  const s = [...a].sort((x, y) => x - y), m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
 const usd = (v) => `$${v.toFixed(3)}`;
 const pct = (b, l) => {
   const d = Math.round(100 * (l - b) / b);
@@ -215,7 +218,7 @@ function renderChart() {
   const narrow = W < 640;
   const rowH = narrow ? 96 : 78, top = narrow ? 34 : 14, left = narrow ? 6 : 220, right = narrow ? 56 : 76;
   const H = top + BENCH.length * rowH + 34 - (narrow ? 24 : 0);
-  const x0 = 0.1, x1 = 0.5;
+  const x0 = 0.1, x1 = 0.6;
   const sx = (v) => left + (v - x0) / (x1 - x0) * (W - left - right);
   const ns = "http://www.w3.org/2000/svg";
   const el = (tag, attrs, text) => {
@@ -233,7 +236,7 @@ function renderChart() {
   defs.append(marker);
   svg.append(defs);
   const grid = el("g", { class: "grid" }), axis = el("g", { class: "axis" });
-  for (let v = 0.1; v <= 0.5001; v += narrow ? 0.2 : 0.1) {
+  for (let v = 0.1; v <= 0.6001; v += narrow ? 0.25 : 0.1) {
     grid.append(el("line", { x1: sx(v), x2: sx(v), y1: top, y2: H - 30 }));
     axis.append(el("text", { x: sx(v), y: H - 10, "text-anchor": "middle" }, `$${v.toFixed(2)}`));
   }
@@ -295,7 +298,7 @@ function renderChart() {
   if ($("table").children.length) return;
   $("table").replaceChildren(...BENCH.map((r) => {
     const tr = document.createElement("tr");
-    for (const v of [r.task, usd(median(r.base)), usd(median(r.lean)), pct(median(r.base), median(r.lean)), "5/5, 5/5"]) {
+    for (const v of [r.task, usd(median(r.base)), usd(median(r.lean)), pct(median(r.base), median(r.lean)), "10/10, 10/10"]) {
       const td = document.createElement("td");
       td.textContent = v;
       tr.append(td);

@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "guard",
+  "run": 1,
+  "wall_s": 48.5,
+  "pass": true,
+  "cost_usd": 0.38605259999999997,
+  "num_turns": 11,
+  "session_id": "66400d0b-30f2-4f51-940a-e60d84ecd025",
+  "answer": "Both work now and end with the expected summary line. `--category toys` filtered 300 of the 2400 orders correctly.\n\nSummary: added `--category NAME` via argparse to `tools/report.py`, filtering orders by `product[\"category\"]`. Also fixed a pre-existing bug where it called `shipping.ship_cost_for` instead of the actual `shipping.ship_cost`, which was breaking the script even without the new flag.",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 586190,
+  "output_tokens": 3034,
+  "max_context": 62749,
+  "leak_pct": 2.86,
+  "leaks": {
+    "serial-call": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

@@ -1,0 +1,20 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 29.7,
+  "pass": true,
+  "cost_usd": 0.1286272,
+  "num_turns": 7,
+  "session_id": "1c99478c-878a-49e1-ad31-c1983873f8a1",
+  "answer": "All 126 tests pass now. The bug was an off-by-one in `shopcart/pricing.py`: `bulk_discount` used `qty > BULK_THRESHOLD`, excluding the threshold value itself, when it should include it (`qty >= BULK_THRESHOLD`).",
+  "model": "claude-sonnet-5",
+  "api_calls": 6,
+  "context_tokens": 293233,
+  "output_tokens": 1161,
+  "max_context": 51254,
+  "leak_pct": 0.0,
+  "leaks": {},
+  "escaped": false,
+  "batch": "b1"
+}

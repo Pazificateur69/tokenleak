@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 51.8,
+  "pass": true,
+  "cost_usd": 0.4822334,
+  "num_turns": 12,
+  "session_id": "ed6185af-d82f-4bd8-b1f7-ea04da7fc975",
+  "answer": "Both work correctly and end with the summary line. Filtering by `--category toys` only prints orders where the product's category matches, and the no-filter case is unaffected (2400 total orders, as expected since there are 8 categories \u00d7 300 orders each).\n\nSummary: added `--category NAME` to `tools/report.py` (via argparse) that skips orders whose product category doesn't match, and fixed a pre-existing bug where the script called the nonexistent `shipping.ship_cost_for` instead of `shipping.sh",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 1027929,
+  "output_tokens": 3242,
+  "max_context": 107343,
+  "leak_pct": 19.59,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b2"
+}

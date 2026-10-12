@@ -1,0 +1,23 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 49.5,
+  "pass": true,
+  "cost_usd": 0.2655874,
+  "num_turns": 11,
+  "session_id": "0921bd30-cabe-4f9c-9cb4-cbf4802da16b",
+  "answer": "Build now passes. The bug was a typo in `tools/report.py`: it called `shipping.ship_cost_for(product)`, a function that doesn't exist \u2014 `shopcart/shipping.py` defines `ship_cost`, which is what `cart.py` and the test suite already use. Fixed the call site to match the real API.",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 682674,
+  "output_tokens": 2001,
+  "max_context": 71768,
+  "leak_pct": 8.58,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

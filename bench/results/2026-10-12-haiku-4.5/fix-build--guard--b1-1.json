@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 1,
+  "wall_s": 25.2,
+  "pass": true,
+  "cost_usd": 0.0873796,
+  "num_turns": 10,
+  "session_id": "37ec8f6f-7032-4c27-8ba1-32a6ba09d154",
+  "answer": "Fixed! The build now passes. The issue was in `tools/report.py` line 15 \u2014 it was calling `shipping.ship_cost_for()` but the actual function in the shipping module is named `ship_cost()`. I corrected the function call and the build completes successfully.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 9,
+  "context_tokens": 425624,
+  "output_tokens": 1873,
+  "max_context": 51686,
+  "leak_pct": 5.09,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

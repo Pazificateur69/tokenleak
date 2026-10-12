@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "guard",
+  "run": 3,
+  "wall_s": 47.7,
+  "pass": true,
+  "cost_usd": 0.235585,
+  "num_turns": 12,
+  "session_id": "8b1abfb1-9a16-4302-947a-efd44a071355",
+  "answer": "Both work and end with the summary line. The 300 filtered toy orders are a subset of the 2400 total, as expected.\n\nAdded `--category NAME` to `tools/report.py` (filters by `product[\"category\"]` from the catalog) and fixed a pre-existing bug where it called a nonexistent `shipping.ship_cost_for` instead of `shipping.ship_cost` \u2014 without that fix, the command crashed regardless of `--category`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 12,
+  "context_tokens": 701013,
+  "output_tokens": 2434,
+  "max_context": 61776,
+  "leak_pct": 4.66,
+  "leaks": {
+    "serial-call": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

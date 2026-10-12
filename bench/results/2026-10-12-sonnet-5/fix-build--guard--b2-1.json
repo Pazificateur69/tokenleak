@@ -1,0 +1,23 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 1,
+  "wall_s": 42.0,
+  "pass": true,
+  "cost_usd": 0.37303439999999993,
+  "num_turns": 9,
+  "session_id": "7132d316-0de5-4ef3-b53b-53d14371170c",
+  "answer": "Build now passes (`exit=0`). The bug was in `tools/report.py`, which called a nonexistent `shipping.ship_cost_for(product)` \u2014 the real function in `shopcart/shipping.py` (used by `cart.py` and all tests) is `ship_cost`. Fixed the call site to match.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 508064,
+  "output_tokens": 1932,
+  "max_context": 66336,
+  "leak_pct": 5.68,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

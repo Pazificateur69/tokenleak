@@ -1,0 +1,20 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 18.3,
+  "pass": true,
+  "cost_usd": 0.1541474,
+  "num_turns": 7,
+  "session_id": "22c19424-d7f7-4202-851c-f4e270a9c470",
+  "answer": "All 126 tests pass. The bug was in `shopcart/pricing.py:14` \u2014 `bulk_discount` used `qty > BULK_THRESHOLD` instead of `>=`, off-by-one against both its own docstring (\"...or more\") and the test expecting a discount exactly at the threshold of 10. Fixed to `qty >= BULK_THRESHOLD`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 7,
+  "context_tokens": 398044,
+  "output_tokens": 1260,
+  "max_context": 59376,
+  "leak_pct": 0.0,
+  "leaks": {},
+  "escaped": false,
+  "batch": "b2"
+}

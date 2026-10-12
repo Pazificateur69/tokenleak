@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 3,
+  "wall_s": 23.5,
+  "pass": true,
+  "cost_usd": 0.09037940000000001,
+  "num_turns": 10,
+  "session_id": "45396c7e-5667-42b2-884a-70b173f323ca",
+  "answer": "Done! The build now passes. The issue was in `tools/report.py` line 15: it was calling `shipping.ship_cost_for(product)` which doesn't exist. The correct function name is `shipping.ship_cost(product)`.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 10,
+  "context_tokens": 467887,
+  "output_tokens": 1673,
+  "max_context": 51563,
+  "leak_pct": 4.92,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

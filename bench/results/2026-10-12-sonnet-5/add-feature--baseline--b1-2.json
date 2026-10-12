@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 50.3,
+  "pass": true,
+  "cost_usd": 0.45912279999999994,
+  "num_turns": 11,
+  "session_id": "b61023fa-8491-4d7b-a003-fd3e92d042cd",
+  "answer": "Both work correctly: `--category toys` filters to only toys orders (300 of 2400) and ends with the usual `report: N orders, revenue X EUR` summary line; the unfiltered run still processes all 2400 orders.",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 921562,
+  "output_tokens": 3181,
+  "max_context": 107021,
+  "leak_pct": 20.58,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b1"
+}

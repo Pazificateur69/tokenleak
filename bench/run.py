@@ -173,9 +173,9 @@ def summarize(outdir):
     med = statistics.median
     present = [v for v in VARIANTS if any(r["variant"] == v for r in recs)]
     rows, tot = [], {v: {"cost": 0.0, "ctx": 0.0, "out": 0.0} for v in present}
-    lines = ["| task | variant | pass | cost (median) | context tokens (median) | output tokens (median) "
+    lines = ["| task | variant | runs | pass | cost: median (range) | context tokens (median) | output tokens (median) "
              "| API calls (median) | leak score (median) |",
-             "|---|---|---|---|---|---|---|---|"]
+             "|---|---|---|---|---|---|---|---|---|"]
     for task in TASKS:
         for v in present:
             rs = [r for r in recs if r["task"] == task and r["variant"] == v]
@@ -187,7 +187,9 @@ def summarize(outdir):
             tot[v]["cost"] += c
             tot[v]["ctx"] += x
             tot[v]["out"] += o
-            lines.append(f"| {task} | {v} | {sum(r['pass'] for r in rs)}/{len(rs)} | ${c:.3f} | {T.fmt(x)} | "
+            costs = [r.get("cost_usd") or 0 for r in rs]
+            lines.append(f"| {task} | {v} | {len(rs)} | {sum(r['pass'] for r in rs)}/{len(rs)} | "
+                         f"${c:.3f} (${min(costs):.3f}-{max(costs):.3f}) | {T.fmt(x)} | "
                          f"{T.fmt(o)} | {med([r.get('api_calls', 0) for r in rs]):.0f} | "
                          f"{med([r.get('leak_pct', 0) for r in rs]):.1f}% |")
     passes = {v: f"{sum(r['pass'] for r in recs if r['variant'] == v)}/{sum(1 for r in recs if r['variant'] == v)}"

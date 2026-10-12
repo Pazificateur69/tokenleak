@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 5,
+  "wall_s": 42.9,
+  "pass": true,
+  "cost_usd": 0.22127480000000002,
+  "num_turns": 10,
+  "session_id": "b98dd774-3c9e-481e-9470-9527fbbf012a",
+  "answer": "Build passes now. The failure was a typo in `tools/report.py:15` \u2014 it called `shipping.ship_cost_for(product)`, but the module only defines `ship_cost` (used consistently elsewhere in `cart.py` and all tests). Fixed by correcting the call site to `shipping.ship_cost(product)`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 540205,
+  "output_tokens": 2142,
+  "max_context": 67245,
+  "leak_pct": 5.67,
+  "leaks": {
+    "wide-search": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

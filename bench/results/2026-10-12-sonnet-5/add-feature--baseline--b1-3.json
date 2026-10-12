@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 54.1,
+  "pass": true,
+  "cost_usd": 0.4664756,
+  "num_turns": 12,
+  "session_id": "fdc877ce-add3-46ba-be04-57e869b8f2ce",
+  "answer": "Both work now and end with the expected summary line. Confirmed `--category toys` filters to only toy orders (300 of them) while the unfiltered run still covers all 2400.\n\n**Changes to `tools/report.py`:**\n- Added `--category NAME` via `argparse`; when set, rows whose product category doesn't match are skipped before computing line/ship costs.\n- Fixed a pre-existing bug where it called `shipping.ship_cost_for` (doesn't exist) instead of `shipping.ship_cost` \u2014 this was blocking the command from r",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 945854,
+  "output_tokens": 3264,
+  "max_context": 107459,
+  "leak_pct": 20.67,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false,
+  "batch": "b1"
+}

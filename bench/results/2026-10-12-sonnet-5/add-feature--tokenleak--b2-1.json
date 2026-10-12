@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "tokenleak",
+  "run": 1,
+  "wall_s": 65.0,
+  "pass": true,
+  "cost_usd": 0.37483919999999993,
+  "num_turns": 14,
+  "session_id": "e51a4a01-f7b0-4d8e-ba36-a0ff0282d551",
+  "answer": "Added `--category` to `tools/report.py` via argparse \u2014 it skips orders whose product category doesn't match, and is omitted entirely when not passed (all 2400 orders processed). Along the way I also fixed a pre-existing bug: the script called `shipping.ship_cost_for`, which doesn't exist (the module only defines `ship_cost`), so it crashed on every run regardless of `--category`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 14,
+  "context_tokens": 924991,
+  "output_tokens": 3784,
+  "max_context": 75895,
+  "leak_pct": 14.84,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}

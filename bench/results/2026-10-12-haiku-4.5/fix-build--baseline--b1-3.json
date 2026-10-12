@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 35.1,
+  "pass": true,
+  "cost_usd": 0.0818057,
+  "num_turns": 11,
+  "session_id": "1bbe8cf6-cf78-4ce1-b5d4-46e4913acd8a",
+  "answer": "Build fixed! The issue was a function name mismatch in `tools/report.py`\u2014it was calling `shipping.ship_cost_for()` but the correct function name in the shipping module is `ship_cost()`. I corrected the call, and the build now passes all stages (compile, lint, and report generation).",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 369800,
+  "output_tokens": 2141,
+  "max_context": 50984,
+  "leak_pct": 5.23,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

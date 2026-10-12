@@ -1,0 +1,22 @@
+{
+  "task": "fix-test",
+  "variant": "guard",
+  "run": 5,
+  "wall_s": 25.5,
+  "pass": true,
+  "cost_usd": 0.0856444,
+  "num_turns": 10,
+  "session_id": "7047cdba-ce6a-4d0f-bbe3-461684f158b1",
+  "answer": "Perfect! All 126 tests are now passing. The issue was in `shopcart/pricing.py:14` where the condition was checking `if qty > BULK_THRESHOLD` when it should have been `if qty >= BULK_THRESHOLD`. The bulk discount should apply at the threshold (10 units), not only above it.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 386024,
+  "output_tokens": 2023,
+  "max_context": 52466,
+  "leak_pct": 5.19,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false,
+  "batch": "b1"
+}

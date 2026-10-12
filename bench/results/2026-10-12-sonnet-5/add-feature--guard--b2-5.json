@@ -1,0 +1,23 @@
+{
+  "task": "add-feature",
+  "variant": "guard",
+  "run": 5,
+  "wall_s": 51.0,
+  "pass": true,
+  "cost_usd": 0.2690222,
+  "num_turns": 11,
+  "session_id": "18f79e2e-ea75-41b9-8f82-45d2150cc24a",
+  "answer": "Works correctly \u2014 filtered run keeps only `toys` orders and ends with the summary line, unfiltered run still works as before.\n\n**Changes to `tools/report.py`:**\n- Added `--category` CLI option (via `argparse`) that skips orders whose product category doesn't match.\n- Fixed a pre-existing bug: the code called `shipping.ship_cost_for(product)`, but the actual function is `shipping.ship_cost(product)` \u2014 this was crashing every invocation of the script before my change.",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 680024,
+  "output_tokens": 2950,
+  "max_context": 70323,
+  "leak_pct": 13.74,
+  "leaks": {
+    "wide-search": 1,
+    "serial-call": 2
+  },
+  "escaped": false,
+  "batch": "b2"
+}

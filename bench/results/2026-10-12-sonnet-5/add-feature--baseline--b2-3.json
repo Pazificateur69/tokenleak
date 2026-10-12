@@ -1,0 +1,22 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 50.5,
+  "pass": true,
+  "cost_usd": 0.29882980000000003,
+  "num_turns": 10,
+  "session_id": "2b168db7-5428-4e3f-893b-8918bed379f0",
+  "answer": "Works now and all SKUs in the filtered output are `TY-` (toys). Both the filtered and unfiltered runs end with the expected `report: N orders, revenue ... EUR` summary line.\n\nSummary: added `--category` to `tools/report.py` via argparse, which skips orders whose product category doesn't match. Also fixed a pre-existing bug where the script called a nonexistent `shipping.ship_cost_for()` instead of `shipping.ship_cost()` \u2014 without that fix, the command couldn't run at all, filtered or not.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 635775,
+  "output_tokens": 2687,
+  "max_context": 81181,
+  "leak_pct": 16.05,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false,
+  "batch": "b2"
+}
