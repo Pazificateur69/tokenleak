@@ -166,6 +166,10 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 **Limitations.** Token sizes of individual results are estimated (~4 chars/token); session totals and costs are exact. "Avoidable" is a judgment, kept conservative. `serial-call` is a heuristic (it only flags a call whose target was already known and isn't mentioned in the previous result). Codex transcript formats change between versions; Claude Code is the best-tested path.
 
+## Listed on
+
+[Skills Directory](https://www.skillsdirectory.com/skills/pazificateur69-tokenleak) · [vibecodes](https://vibecodes.net) · [Claude Market](https://www.claudemarket.ai/mcp)
+
 ## Contributing
 
 Issues and PRs welcome, especially transcripts formats from other agents (Gemini CLI, Cursor, OpenCode) and new leak detectors. Tests: `python3 -m unittest discover -s tests`. Benchmark: `python3 bench/run.py --runs 5`.
