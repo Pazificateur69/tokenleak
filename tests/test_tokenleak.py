@@ -201,6 +201,46 @@ class TokenleakTest(unittest.TestCase):
         T.statusline(io.StringIO("{}"), buf)
         self.assertEqual(buf.getvalue(), "tokenleak\n")
 
+    def test_command_family_and_advice(self):
+        self.assertEqual(T.command_family('cd /p && FOO=1 npx vitest run src/a.test.ts'), "npx vitest run")
+        self.assertEqual(T.command_family("npm run build -- --watch"), "npm run build")
+        self.assertEqual(T.command_family("python3 -m pytest tests/ -x"), "python3 -m pytest")
+        self.assertEqual(T.command_family("npx vitest src/a.test.ts"), "npx vitest")
+        self.assertEqual(T.command_family("docker compose up -d"), "docker compose up")
+        self.assertTrue(T.is_project_command("npm test", "npm test"))
+        self.assertFalse(T.is_project_command("for f in *; do wc -l $f; done", "for"))
+        self.assertFalse(T.is_project_command("python3 <<EOF", "python3 <<EOF"))
+        self.assertIn("pytest -q -x", T.quiet_advice("pytest"))
+        self.assertIn("git status -s", T.quiet_advice("git status"))
+        self.assertIn('${TMPDIR:-/tmp}', T.quiet_advice("npm run build"))
+
+    def test_suggest_project_rules(self):
+        proj = tempfile.mkdtemp()
+        big = os.path.join(proj, "catalog.py")
+        with open(big, "w") as f:
+            f.write(APP)
+        lines = [{"type": "user", "sessionId": "p1", "cwd": proj, "message": {"role": "user", "content": "go"}}]
+        for k in range(2):
+            lines += assistant(f"t{k}", u(cread=20000), tool_use(f"b{k}", "Bash", {"command": f"cd {proj} && npm test"}))
+            lines.append(result(f"b{k}", "PASS a test\n" * 1500))
+            lines += assistant(f"r{k}", u(cread=30000), tool_use(f"r{k}", "Read", {"file_path": big}))
+            lines.append(result(f"r{k}", APP))
+            lines += assistant(f"x{k}", u(cread=31000), tool_use(f"x{k}", "Bash", {"command": "cat /tmp/elsewhere.txt"}))
+            lines.append(result(f"x{k}", "z" * 30000))
+        for d in lines:
+            d["cwd"] = proj
+        path = os.path.join(self.dir, "proj.jsonl")
+        write_jsonl(path, lines)
+        threads = [t for t in T.parse(path) if t.calls]
+        buf = io.StringIO()
+        T.suggest(threads, buf)
+        out = buf.getvalue()
+        self.assertIn("## Token hygiene for this repo", out)
+        self.assertIn("`npm test`", out)
+        self.assertIn("--silent", out)
+        self.assertIn("`catalog.py`", out)
+        self.assertNotIn("elsewhere", out)
+
     def test_rules_print_skill_body(self):
         buf = io.StringIO()
         with redirect_stdout(buf):

@@ -18,7 +18,7 @@ import sys
 import time
 from datetime import datetime
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -342,6 +342,11 @@ def classify(tu):
         return "fetch", str(inp.get("url") or inp.get("query") or tu.name), None
     if n in ("task", "agent", "spawn_agent"):
         return "subagent", str(inp.get("description") or ""), None
+    raw_js = isinstance(tu.input, str) and n == "exec" and re.search(r"\btools\.|\bawait\b|=>", tu.input)
+    if raw_js or ("code" in inp and not ("cmd" in inp or "command" in inp)):  # Codex code mode: JS calling tools
+        code = tu.input if raw_js else str(inp.get("code") or "")
+        first = code.strip().splitlines()[0] if code.strip() else tu.name
+        return ("fetch" if re.search(r"web__|\bfetch\(|browse|search_query", code) else "other"), first, None
     if n in SHELL_TOOLS or "command" in inp or "cmd" in inp:
         cmd = shell_command(tu.input)
         words = _main_segment(cmd)
@@ -691,8 +696,13 @@ def run(args):
 def summarize(threads):
     """-> (totals, by_kind, findings sorted by cost) for a set of threads."""
     findings, units, sess, loaded, firsts, base_cost = [], 0.0, {}, {}, [], 0.0
+    projects = {}
     for t in threads:
         fs, u = analyze(t)
+        pj = projects.setdefault(t.cwd or "?", {"units": 0.0, "leak": 0.0, "sessions": set(), "usd": 0.0})
+        pj["units"] += u
+        pj["leak"] += sum(f.cost for f in fs)
+        pj["sessions"].add((t.agent, t.session or t.path))
         if not t.subagent:
             w = weights(t)
             n, nseg = len(t.calls), len({c.seg for c in t.calls})
@@ -718,6 +728,14 @@ def summarize(threads):
             r.text = ""
     leak = sum(f.cost for f in findings)
     pct = 100 * leak / units if units else 0.0
+    by_project = []
+    for cwd, pj in projects.items():  # avoidable spend per project, from each session's own cost
+        usd = sum(sess[k]["usd"] * sess[k]["leak"] / sess[k]["units"] for k in pj["sessions"]
+                  if sess[k]["usd"] and sess[k]["units"])
+        by_project.append({"cwd": cwd, "sessions": len(pj["sessions"]), "cost_units": pj["units"],
+                           "leak_pct": 100 * pj["leak"] / pj["units"] if pj["units"] else 0, "usd_leak": usd or None,
+                           "leak_units": pj["leak"]})
+    by_project.sort(key=lambda p: -p["leak_units"])
     usd_total = sum(s["usd"] for s in sess.values() if s["usd"])
     usd_leak = sum(s["usd"] * s["leak"] / s["units"] for s in sess.values() if s["usd"] and s["units"])
     totals = {
@@ -740,6 +758,7 @@ def summarize(threads):
         "avg_first_call_context": sum(firsts) / len(firsts) if firsts else 0,
         "base_context_pct": 100 * base_cost / units if units else 0,
         "always_loaded": sorted(({"path": f, **e} for f, e in loaded.items()), key=lambda e: -e["cost"]),
+        "projects": by_project,
     }
     by_kind = {}
     for f in findings:
@@ -795,6 +814,14 @@ def print_report(totals, by_kind, findings, since, args, out=None):
         share = 100 * k["cost"] / totals["cost_units"] if totals["cost_units"] else 0
         avoid = fmt(k["avoidable_tokens"]) if k["avoidable_tokens"] else "-"
         w(f"  {kind:<14}{k['count']:>7}{avoid:>12}{share:>8.1f}%   {st('2', KINDS[kind][2])}\n")
+    if len(totals["projects"]) > 1 and not args.redact:
+        w(f"\n  {st('1', 'by project')}\n")
+        home = os.path.expanduser("~")
+        for pj in totals["projects"][:6]:
+            name = pj["cwd"].replace(home, "~")
+            name = name if len(name) <= 44 else "…" + name[-43:]
+            usd = f"≈ ${pj['usd_leak']:,.2f} avoidable" if pj["usd_leak"] else ""
+            w(f"  {pj['leak_pct']:>6.1f}%  {name:<44} {st('2', str(pj['sessions']) + (' session' if pj['sessions'] == 1 else ' sessions')):>14}  {st('2', usd)}\n")
     if totals["always_loaded"] or totals["avg_first_call_context"]:
         note = (fmt(totals["avg_first_call_context"]) + " tok at session start (system prompt, tools, MCP"
                 + (", files below" if totals["always_loaded"] else "") + "), re-sent every call")
@@ -900,7 +927,8 @@ def print_share(totals, by_kind, out=None):
 
 def to_json(totals, by_kind, findings, args):
     if args.redact:
-        totals = dict(totals, always_loaded=[dict(e, path=os.path.basename(e["path"])) for e in totals["always_loaded"]])
+        totals = dict(totals, always_loaded=[dict(e, path=os.path.basename(e["path"])) for e in totals["always_loaded"]],
+                      projects=[dict(p, cwd=None) for p in totals["projects"]])
     return {
         "version": __version__,
         "totals": totals,
@@ -943,6 +971,131 @@ def statusline(stdin, out=None):
     out.write(f"\033[{color}mleak {totals['leak_pct']:.1f}% {g}\033[0m · ctx {fmt(main.calls[-1].ctx_in)}{top}\n")
 
 
+# ---------------------------------------------------------------- suggest: project rules from your own leaks
+
+TOOL_WRAPPERS = ("npx", "pnpm", "yarn", "bunx", "bun", "uv", "poetry", "pipenv", "python", "python3")
+SUBCOMMAND_TOOLS = {"npm", "pnpm", "yarn", "bun", "git", "docker", "cargo", "go", "dotnet", "mvn", "gradle", "./gradlew",
+                    "make", "kubectl", "terraform", "gh", "uv", "poetry", "composer", "php", "rails", "bundle", "mix",
+                    "vitest", "jest", "playwright", "prisma", "next", "turbo", "nx", "cypress"}
+SUBCOMMAND = re.compile(r"^[a-z][a-z0-9:_-]*$")  # `run`, `test:unit`; not paths like `src/a.test.ts`
+QUIET = [  # (pattern on the command family, advice); first match wins
+    (r"\b(pytest|py\.test)\b", "`{cmd} -q -x 2>&1 | tail -n 40`"),
+    (r"\b(jest|vitest)\b", "`{cmd} --reporter=dot 2>&1 | tail -n 40` (iterate on the one failing test)"),
+    (r"^(npm|pnpm|yarn|bun) (run )?test", "`{cmd} --silent 2>&1 | tail -n 40` (iterate on the one failing test)"),
+    (r"^(npm|pnpm|yarn|bun) (install|ci|add|i)\b|^pip3? install|^uv (sync|pip)", "`{cmd} --silent` (or `-q`), then check the exit code only"),
+    (r"^cargo (test|build|check|clippy)", "`{cmd} -q 2>&1 | tail -n 40`"),
+    (r"^go (test|build|vet)", "`{cmd} 2>&1 | grep -v '^ok' | tail -n 40`"),
+    (r"^git status", "`git status -s`"),
+    (r"^git (log|reflog)", "`git log --oneline -n 20` first, then `git show --stat <sha>`"),
+    (r"^git (diff|show)", "`git diff --stat` first, then `git diff -- <path>` for the files you need"),
+    (r"^(tsc|npx tsc|eslint|npx eslint|ruff|mypy|pyright|flake8)\b", "`{cmd} 2>&1 | head -n 30` (fix the first errors, re-run)"),
+    (r"^(curl|wget|http)\b", "`{cmd} -s | head -c 2000` or pipe JSON through `jq` to pick fields"),
+]
+# commands worth a project rule: build/test/install/lint/vcs tools, not one-off shell snippets
+PROJECT_TOOLS = {"npm", "pnpm", "yarn", "bun", "npx", "bunx", "make", "docker", "podman", "cargo", "go", "mvn", "gradle",
+                 "./gradlew", "dotnet", "pytest", "py.test", "tox", "nox", "uv", "poetry", "pipenv", "pip", "pip3", "rails",
+                 "bundle", "rake", "rspec", "php", "composer", "mix", "terraform", "kubectl", "helm", "tsc", "eslint",
+                 "prettier", "ruff", "mypy", "pyright", "flake8", "jest", "vitest", "playwright", "cypress", "git", "gh",
+                 "deno", "swift", "xcodebuild", "flutter", "dart", "gcc", "clang", "cmake", "ctest", "ninja", "next",
+                 "vite", "webpack", "turbo", "nx", "prisma", "alembic", "dbt"}
+
+
+def is_project_command(cmd, family):
+    head = family.split(" ")[0] if family else ""
+    if "<<" in cmd or not head:
+        return False
+    if head in ("python", "python3"):  # only `python -m <tool>` style invocations
+        return " -m " in f" {family} "
+    return head in PROJECT_TOOLS
+
+
+LOG_HINT = '`L="${{TMPDIR:-/tmp}}/out.log"; {cmd} > "$L" 2>&1; echo "exit=$?"; tail -n 40 "$L"`'
+
+
+def command_family(cmd):
+    """`cd x && FOO=1 npx vitest run src/a.test.ts` -> `npx vitest run`: what a project rule should name."""
+    words = _main_segment(cmd)
+    if not words:
+        return ""
+    words = [words[0].rsplit("/", 1)[-1] if words[0].startswith("/") else words[0]] + words[1:]
+    out = [words[0]]
+    rest = [w for w in words[1:] if not w.startswith("-") or w == "-m"]
+    if words[0] in TOOL_WRAPPERS and rest:
+        out.append(rest.pop(0))
+        if out[-1] in ("-m", "run", "exec") and rest:
+            out.append(rest.pop(0))
+    if out[-1] in SUBCOMMAND_TOOLS and rest and SUBCOMMAND.match(rest[0]):
+        out.append(rest.pop(0))
+        if out[-1] in ("run", "compose", "exec") and rest and SUBCOMMAND.match(rest[0]):
+            out.append(rest.pop(0))
+    return " ".join(out)
+
+
+def quiet_advice(family):
+    for pat, advice in QUIET:
+        if re.search(pat, family):
+            return advice.format(cmd=family)
+    return LOG_HINT.format(cmd=family)
+
+
+def suggest(threads, out=None, since=0.0):
+    """Turn this project's recurring leaks into rules to paste into CLAUDE.md / AGENTS.md."""
+    out = out or sys.stdout
+    totals, by_kind, findings = summarize(threads)
+    if not totals["threads"]:
+        out.write("tokenleak: no sessions found for this project. Run it from the project folder, or widen --since.\n")
+        return
+    cwds = [t.cwd for t in threads if t.cwd]
+    root = max(set(cwds), key=cwds.count) if cwds else ""
+    rel = lambda p: os.path.relpath(p, root) if root and os.path.isabs(str(p)) and str(p).startswith(root) else str(p)
+
+    shells, files, searches = {}, {}, {}
+    for f in findings:
+        if f.kind == "noisy-shell":
+            fam = command_family(str(f.label))
+            if is_project_command(str(f.label), fam):
+                e = shells.setdefault(fam, [0, 0.0, 0.0])
+                e[0] += 1; e[1] += f.tokens; e[2] += f.cost
+        elif f.kind in ("big-read", "re-read"):
+            path = _norm(f.label, f.thread.cwd)
+            if not root or not path.startswith(root.rstrip("/") + "/") or not os.path.isfile(path):
+                continue  # only files that exist in this project (relative reads after a `cd` can point elsewhere)
+            key = rel(path)
+            e = files.setdefault(key, [0, 0.0, 0.0])
+            e[0] += 1; e[1] = max(e[1], f.tokens); e[2] += f.cost
+        elif f.kind == "wide-search":
+            words = _main_segment(str(f.label)) if f.tool.lower() in SHELL_TOOLS else [f.tool]
+            e = searches.setdefault(words[0] if words else f.tool, [0, 0.0, 0.0])
+            e[0] += 1; e[1] += f.tokens; e[2] += f.cost
+
+    def top(d, n):
+        return sorted(d.items(), key=lambda kv: -kv[1][2])[:n]
+
+    lines = []
+    for fam, (n, toks, _) in top(shells, 5):
+        if n >= 2 or toks >= 6000:
+            lines.append(f"- `{fam}` printed ~{fmt(toks / n)} tokens per run ({n}x). Run it as {quiet_advice(fam)}.")
+    big = [(p, n, toks) for p, (n, toks, _) in top(files, 6) if n >= 2 or toks >= 6000]
+    if big:
+        listed = ", ".join(f"`{p}` (~{fmt(toks)} tokens, read {n}x)" for p, n, toks in big)
+        lines.append(f"- Large files: {listed}. `grep -n` them, then read only the lines you need.")
+    for tool, (n, toks, _) in top(searches, 1):
+        if n >= 2:
+            lines.append(f"- `{tool}` searches returned ~{fmt(toks / n)} tokens each ({n}x): scope them to a folder or file type, cap results, use `-l` for names only.")
+
+    name = os.path.basename(root.rstrip("/")) if root else "this project"
+    window = datetime.fromtimestamp(since).strftime("%Y-%m-%d") if since else "the beginning"
+    spend = f", about ${totals['usd_leak']:,.2f} of avoidable spend" if totals["usd_leak"] else ""
+    out.write(f"<!-- tokenleak suggest: {totals['sessions']} sessions in {name} since {window}, "
+              f"leak score {totals['leak_pct']:.1f}%{spend} -->\n")
+    if not lines:
+        out.write("No project-specific rules to add. Run `tokenleak --here` for the session-level leaks.\n")
+        return
+    out.write("## Token hygiene for this repo\n\n")
+    out.write("Keep tool output out of the context; these are this repo's biggest repeat offenders:\n\n")
+    out.write("\n".join(lines) + "\n")
+
+
 def print_rules(out=None):
     out = out or sys.stdout
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
@@ -958,6 +1111,7 @@ def main(argv=None):
         description="Find where your coding agent leaks context tokens (Claude Code + Codex transcripts). "
                     "Local and read-only.",
         epilog="`tokenleak rules` prints the rules to paste into AGENTS.md / CLAUDE.md / .cursorrules. "
+               "`tokenleak suggest` turns this project's leaks into rules for its CLAUDE.md / AGENTS.md. "
                "`tokenleak statusline` is a Claude Code status line (reads its JSON on stdin).")
     ap.add_argument("paths", nargs="*", help="transcript files or folders (default: ~/.claude/projects, ~/.codex/sessions)")
     ap.add_argument("--since", help="window: 24h, 7d (default), 4w, 2026-10-01, or all")
@@ -976,6 +1130,14 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["rules"]:
         print_rules()
+        return 0
+    if argv[:1] == ["suggest"]:  # project rules from this project's own leaks (default: here, last 30 days)
+        args = ap.parse_args(argv[1:])
+        if not (args.paths or args.project or args.session or args.current):
+            args.here = True
+        args.since = args.since or "30d"
+        threads, since = collect(args)
+        suggest(threads, since=since)
         return 0
     if argv[:1] == ["statusline"]:
         statusline(sys.stdin)

@@ -81,6 +81,26 @@ Or from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask yo
 | `--share` | small anonymized card for posting |
 | `--redact` | hide commands, paths and project names |
 
+### Project rules from your own leaks
+
+```bash
+cd your-project && python3 tokenleak.py suggest
+```
+
+Reads the last 30 days of sessions in that project and prints a block to paste into its `CLAUDE.md` or `AGENTS.md`, written from what actually leaked there. Illustrative output (yours depends on your sessions):
+
+```markdown
+## Token hygiene for this repo
+
+- `npm test` printed ~9.1k tokens per run (23x). Run it as `npm test --silent 2>&1 | tail -n 40` (iterate on the one failing test).
+- `git diff` printed ~3.0k tokens per run (5x). Run it as `git diff --stat` first, then `git diff -- <path>` for the files you need.
+- Large files: `src/data/catalog.ts` (~18.2k tokens, read 14x). `grep -n` them, then read only the lines you need.
+```
+
+Only real project commands (tests, builds, installs, linters, git, docker) and files that exist in the project make the list. The skill offers to add it for you, and asks first.
+
+The full report also ranks your projects by leak score (`by project`).
+
 ### Live leak meter (Claude Code status line)
 
 See the current session's leak score while you work. Add to `~/.claude/settings.json`:
