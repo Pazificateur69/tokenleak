@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 34.8,
+  "pass": true,
+  "cost_usd": 0.09730540000000001,
+  "num_turns": 11,
+  "session_id": "3a870898-b99f-4358-920d-dc6d77147171",
+  "answer": "Build now passes! The issue was that `report.py` was calling `shipping.ship_cost_for()`, but the function in the shipping module was named `ship_cost()`. I added `ship_cost_for` as an alias to the existing `ship_cost()` function in `shopcart/shipping.py:28`, so the function is now available under both names.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 10,
+  "context_tokens": 466878,
+  "output_tokens": 2394,
+  "max_context": 53359,
+  "leak_pct": 4.39,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

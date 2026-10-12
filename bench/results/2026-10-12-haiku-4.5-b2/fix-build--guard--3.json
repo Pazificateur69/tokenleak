@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 3,
+  "wall_s": 26.3,
+  "pass": true,
+  "cost_usd": 0.0740396,
+  "num_turns": 7,
+  "session_id": "93e3373a-8fbc-4c87-9743-e5aa4386b753",
+  "answer": "Perfect! The build now passes. The issue was that `tools/report.py` was calling the wrong function name: `shipping.ship_cost_for()` when it should be `shipping.ship_cost()`. Fixed it and the build completes successfully.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 7,
+  "context_tokens": 332870,
+  "output_tokens": 1541,
+  "max_context": 50428,
+  "leak_pct": 5.77,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

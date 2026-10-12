@@ -1,0 +1,21 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 26.2,
+  "pass": true,
+  "cost_usd": 0.07801790000000002,
+  "num_turns": 8,
+  "session_id": "a376577c-be24-4617-bf22-b6fc19ac00ab",
+  "answer": "Perfect! All tests are now passing. The root cause was a boundary condition bug in the `bulk_discount` function. The condition was using `>` (greater than) instead of `>=` (greater than or equal to), which prevented the bulk discount from applying exactly at the threshold of 10 items. The docstring correctly stated \"BULK_THRESHOLD units or more\", but the code didn't match this specification.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 369144,
+  "output_tokens": 1905,
+  "max_context": 49646,
+  "leak_pct": 5.48,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

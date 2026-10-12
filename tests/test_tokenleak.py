@@ -248,7 +248,8 @@ class TokenleakTest(unittest.TestCase):
         buf = io.StringIO()
         with redirect_stdout(buf):
             T.main([self.dir, "--since", "all", "--no-color", "--html", out, "--redact"])
-        page = open(out, encoding="utf-8").read()
+        with open(out, encoding="utf-8") as fh:
+            page = fh.read()
         self.assertIn("Leak score", page)
         self.assertIn("big-read", page)
         self.assertNotIn("/proj", page)  # --redact hides paths in the report too
@@ -350,10 +351,63 @@ class TokenleakTest(unittest.TestCase):
 
         denied = json.loads(run({"tool_name": "Read", "tool_input": {"file_path": big}}))
         self.assertEqual(denied["hookSpecificOutput"]["permissionDecision"], "deny")
-        self.assertIn("3000 lines", denied["hookSpecificOutput"]["permissionDecisionReason"])
+        reason = denied["hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("3,000 lines", reason)
+        self.assertNotIn("Outline", reason)  # nothing worth a map in filler
         self.assertEqual(run({"tool_name": "Read", "tool_input": {"file_path": big, "limit": 3001}}), "")
         self.assertEqual(run({"tool_name": "Bash", "tool_input": {"command": "cat " + big}}), "")
+        self.assertEqual(run([1, 2]), "")  # not an event: let the call through
         self.assertEqual(run({"tool_name": "Read", "tool_input": {"file_path": big}}, {"TOKENLEAK_GUARD": "0"}), "")
+
+        mod = os.path.join(self.dir, "mod.py")
+        with open(mod, "w") as f:
+            f.write("TABLE = [\n" + "    1,\n" * 4000 + "]\n\nclass Cart:\n    def total(self):\n        pass\n\n"
+                    "def tariff(kg):\n    return kg\n")
+        reason = json.loads(run({"tool_name": "Read", "tool_input": {"file_path": mod}}))[
+            "hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("1: TABLE = [", reason)
+        self.assertIn("4004: class Cart:", reason)
+        self.assertIn("4005: def total(self):", reason)
+        self.assertIn("4008: def tariff(kg):", reason)
+
+    def test_outline_keeps_outer_levels(self):
+        src = "class A:\n" + "".join(f"    def m{i}(self):\n        pass\n" for i in range(200)) + "def tail():\n    pass\n"
+        rows = T.outline("a.py", src)
+        self.assertEqual(rows[:2], ["1: class A:", "402: def tail():"])
+        self.assertIn("200 more", rows[-1])
+        many = "".join(f"def f{i}():\n    pass\n" for i in range(150))  # top level too long: sampled over the file
+        rows = T.outline("m.py", many)
+        self.assertEqual(rows[0], "1: def f0():")
+        self.assertEqual(rows[-2], "295: def f147():")
+        self.assertIn("1 in 3 outer ones listed", rows[-1])
+        md = "# Guide\n" + "".join(f"## Ch{i}\n### A\n### B\n" for i in range(30)) + "```bash\n# clone\n```\n"
+        rows = T.outline("guide.md", md)
+        self.assertEqual(len([r for r in rows if "## Ch" in r]), 30)  # levels by #, not by indentation
+        self.assertFalse(any("clone" in r for r in rows))  # comments in code blocks are not headings
+        self.assertEqual(T.outline("bom.md", "\ufeff# Title\r\nbody\r\n"), ["1: # Title"])
+        prose = "    class that supports the protocol\n    type of value.\nconst p = (def as X).prefix;\n"
+        self.assertEqual(T.outline("x.ts", prose + "const f = async (a: A): B => a\n"), ["4: const f = async (a: A): B => a"])
+        self.assertEqual(T.outline("notes.md", "# Title\n#tag\n    # code\n## Part\n"), ["1: # Title", "4: ## Part"])
+        self.assertEqual(T.outline("run.log", "class of errors\n"), [])
+        self.assertEqual(T.outline("rows.csv", "id,sku,qty\n1,a,2\n"), ["1: id,sku,qty  (header)"])
+        rust = T.outline("lib.rs", "pub(crate) fn run() {}\nimpl<T> Show for W<T> {}\ntypeof x\n")
+        self.assertEqual(rust, ["1: pub(crate) fn run() {}", "2: impl<T> Show for W<T> {}"])
+
+    def test_cost_split(self):
+        path = os.path.join(self.dir, "s.jsonl")
+        write_jsonl(path, claude_session())
+        totals, _, _ = T.summarize([t for t in T.parse(path) if t.calls])
+        # 8 calls: fresh 8x10, writes 1.25 x 28000, reads 0.1 x 167100, output 5 x 3350 -> 68540 units
+        self.assertEqual(totals["cost_split_pct"], {"cache_read": 24.4, "cache_write": 51.2, "output": 24.4, "context": 75.6})
+
+    def test_labels(self):
+        self.assertEqual(T.tool_name("mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__guide"), "mcp:guide")
+        self.assertEqual(T.tool_name("mcp__claude-in-chrome__read_page"), "claude-in-chrome:read_page")
+        self.assertEqual(T.tool_name("Read"), "Read")
+        self.assertEqual(T.fit("Read /very/long/path/to/some/deep/folder/file.py", 30), "Read …some/deep/folder/file.py")
+        self.assertEqual(len(T.fit("Read /very/long/path/to/some/deep/folder/file.py", 30)), 30)
+        self.assertEqual(len(T.fit("plugin_engineering_github:create_file src/app/very/long/path.ts", 30)), 30)
+        self.assertEqual(T.fit("Bash npm test -- --verbose --coverage", 20), "Bash npm test -- --…")
 
     def test_rules_print_skill_body(self):
         buf = io.StringIO()

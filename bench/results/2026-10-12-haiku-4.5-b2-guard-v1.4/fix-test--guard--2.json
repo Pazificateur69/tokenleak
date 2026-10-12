@@ -1,0 +1,21 @@
+{
+  "task": "fix-test",
+  "variant": "guard",
+  "run": 2,
+  "wall_s": 33.9,
+  "pass": true,
+  "cost_usd": 0.0762844,
+  "num_turns": 8,
+  "session_id": "03e40624-0ded-4015-a30b-0673f81c29ff",
+  "answer": "Fixed! The issue was in the `bulk_discount` function in `shopcart/pricing.py`. The condition was checking `if qty > BULK_THRESHOLD:` (strictly greater than 10) when it should have been `if qty >= BULK_THRESHOLD:` (10 or more). This meant customers buying exactly 10 units weren't getting the bulk discount they should qualify for. All 126 tests now pass.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 7,
+  "context_tokens": 328016,
+  "output_tokens": 2027,
+  "max_context": 50586,
+  "leak_pct": 5.38,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

@@ -2,6 +2,21 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.5.0 (2026-10-12)
+### New
+- **The read guard hands back an outline.** When it stops a whole read of a big code or Markdown file, the agent gets the file's definitions or headings with line numbers (outermost first, at most 60 rows; a long top level is sampled across the file), so it can `Read` just that range. CSV files get their header; logs and data files get none. Tested end to end with the real plugin: denied, then one `Read` at the right offset.
+- **Cost split** at the top of the report (and in `--html` / `--json`): context (cache reads, cache writes and uncached input) versus output. In the benchmark runs without tokenleak, output was 7% of the cost on Sonnet and 10% on Haiku.
+- MCP tools show as `server:tool` (a server id that is only a UUID is dropped), and long paths in the top-leaks list keep their file name.
+
+### Benchmark
+- Haiku 4.5, second batch (60 runs, 60/60 passed): read guard with outline −28%, the v1.4 guard without it −25% in the same batch (within the noise of 5 runs per task; the outline saved most on the data question, 9 API calls instead of 12).
+- Harness: Apple's `python3` writes bytecode under `~/Library/Caches`, which the run sandbox denies; `fix-build` failed in every arm alike until the cache was pointed inside the run's folder (`PYTHONPYCACHEPREFIX`). Those 15 runs were redone for all three arms.
+
+### Fixed (from an independent review)
+- Outline: a top level longer than 60 entries no longer stops halfway through the file; Markdown headings nest by `#` level and `#` comments inside code blocks are skipped; prose such as "class that ..." and value assignments such as `const p = (x).y` are no longer taken for definitions; a UTF-8 BOM no longer hides line 1; files over 4 MB say the outline covers only their start.
+- The guard ignores a hook event that is not a JSON object instead of printing a traceback.
+- Top-leaks labels never overflow their column, even with long MCP tool names.
+
 ## 1.4.0 (2026-10-12)
 ### New
 - **Read guard** (Claude Code plugin): a whole-file `Read` of a text file over ~24 KB is stopped with its size and a hint to grep first; passing `limit` or `offset` always goes through. `TOKENLEAK_GUARD=0` turns it off, `TOKENLEAK_GUARD_BYTES` moves the threshold. Codex keeps its own hooks file without it.

@@ -39,7 +39,7 @@ TASKS = {
                    "with its usual summary line.",
 }
 VARIANTS = ("baseline", "tokenleak", "guard")  # guard = rules + the plugin's PreToolUse Read guard
-SCRIPT = os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")
+SCRIPT = os.environ.get("TOKENLEAK_BENCH_SCRIPT") or os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")  # guard under test
 # Same for both variants: the agent can work in its repo (+ temp dirs) and cannot read your personal folders.
 HOME_DIRS = ["~/Desktop", "~/Documents", "~/Downloads", "~/Developer", "~/.claude", "~/.codex", "~/.ssh", "~/Library"]
 SANDBOX = {
@@ -141,7 +141,9 @@ def run_one(task, variant, i, args, outdir, rules):
         cmd += ["--append-system-prompt-file", rules]
     t0 = time.time()
     try:
-        p = subprocess.run(cmd, cwd=work, capture_output=True, text=True, timeout=args.timeout)
+        # Apple's python3 caches bytecode under ~/Library/Caches, which the sandbox (rightly) denies
+        env = dict(os.environ, PYTHONPYCACHEPREFIX=os.path.join(work, ".pycache"))
+        p = subprocess.run(cmd, cwd=work, capture_output=True, text=True, timeout=args.timeout, env=env)
         data = json.loads(p.stdout)
     except (subprocess.TimeoutExpired, ValueError) as e:
         data = {"is_error": True, "result": f"runner error: {e}"}

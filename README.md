@@ -18,13 +18,13 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 
 <p align="center"><img src="assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
-**−32% cost over 80 A/B runs on Sonnet 5, same pass rate (40/40). −20% on Haiku 4.5 with the read guard.** [Details](#benchmark).
+**−32% cost over 80 A/B runs on Sonnet 5, same pass rate (40/40). −20% to −28% on Haiku 4.5 with the read guard (two batches, 120 runs).** [Details](#benchmark).
 
 ## Why
 
 In an agent loop, **every tool result you let into context is re-sent on every later call** until the context is compacted. A 6k-token test log read at call 5 of a 60-call session gets paid ~55 more times. Every extra round-trip re-sends the whole context.
 
-So the bill isn't driven by how chatty the agent is. It's driven by **what it lets into its context, and how early**. Making replies shorter saves the cheap part; on real coding sessions most of the cost is context re-reads.
+So the bill isn't driven by how chatty the agent is. It's driven by **what it lets into its context, and how early**. In the [benchmark](#benchmark)'s runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was 7% of a run's cost on Sonnet and 10% on Haiku (medians); the rest was context. Shorter replies save the small part. The audit shows that split on your own sessions.
 
 tokenleak does two things:
 
@@ -33,7 +33,7 @@ tokenleak does two things:
 
 ## Install
 
-**Claude Code (plugin, recommended).** Rules injected at session start, after compaction, and into every subagent, plus a **read guard**: a whole-file read of a big text file (over ~24 KB) is stopped with its size and a hint to grep first; passing `limit` always goes through. Adds the `/tokenleak` skill. Turn the guard off with `TOKENLEAK_GUARD=0`, or move its threshold with `TOKENLEAK_GUARD_BYTES`.
+**Claude Code (plugin, recommended).** Rules injected at session start, after compaction, and into every subagent, plus a **read guard**: a whole-file read of a big text file (over ~24 KB) is stopped, and for code and Markdown the agent gets the file's outline instead (definitions or headings with line numbers) so it can read just the part it needs; passing `limit` always goes through. Adds the `/tokenleak` skill. Turn the guard off with `TOKENLEAK_GUARD=0`, or move its threshold with `TOKENLEAK_GUARD_BYTES`.
 
 ```
 /plugin marketplace add Pazificateur69/tokenleak
@@ -67,6 +67,8 @@ curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skill
 # no install: Python 3.8+, stdlib only, reads ~/.claude/projects and ~/.codex/sessions
 curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 30d
 ```
+
+The report starts with where the money went (`cost split`: context, read from the cache or written to it, versus output), then every leak priced by what it cost.
 
 Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak tokenleak` (or `pipx install git+https://github.com/Pazificateur69/tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
 
@@ -143,7 +145,7 @@ It also shows what's **always loaded**: your `CLAUDE.md` / `AGENTS.md` / memory 
 
 For each tool result: **context tax = avoidable tokens × (cache write + every later call in the same context × cache read)**, using each provider's relative prices (Claude: cache read 0.1×, cache write 1.25–2×, output 5×; Codex/GPT-5: cached 0.1×, output 8×). *Avoidable* is conservative: only the part above a sane budget (e.g. a 6k-token read counts as 4k avoidable), the full size only for exact repeats. The **leak score** is the share of your total token cost that was avoidable. Dollar amounts come from Claude Code's own per-session cost, never from a price table we maintain.
 
-Everything stays on your machine: no network, no telemetry, ~1,400 lines of stdlib Python you can read in ten minutes.
+Everything stays on your machine: no network, no telemetry, ~1,500 lines of stdlib Python you can read in ten minutes.
 
 ## Benchmark
 
@@ -159,19 +161,20 @@ A/B tests in Claude Code (`claude -p`): same prompt, a fresh copy of the same sm
 | add a feature *(held out, see below)* | $0.450 | $0.222 | **−51%** | 10/10 · 10/10 |
 | **total** | **$1.07** | **$0.73** | **−32%** | **40/40 · 40/40** |
 
-**Haiku 4.5**, 5 runs per task and arm (60 runs):
+**Haiku 4.5**, 5 runs per task and arm, two batches (120 runs):
 
-| | without | rules only | rules + read guard |
-|---|---|---|---|
-| total | $0.513 | $0.505 (−1%) | **$0.408 (−20%)** |
-| add a feature | $0.228 | $0.214 | **$0.124 (−46%)** |
-| passed | 20/20 | 20/20 | 20/20 |
+| batch | without | rules only | rules + read guard (v1.4) | rules + read guard with outline (v1.5) | passed |
+|---|---|---|---|---|---|
+| 1 | $0.513 | $0.505 (−1%) | **$0.408 (−20%)** | | 60/60 |
+| 2 | $0.530 | | **$0.396 (−25%)** | **$0.379 (−28%)** | 60/60 |
 
 Medians of the API-equivalent cost per run, as reported by Claude Code. On Sonnet, context tokens −17% and output tokens −11%. The screenshot under [The audit](#the-audit) is the audit of 20 runs *without* the rules.
 
 **Read it honestly.**
 - **Runs vary a lot.** The first Sonnet batch gave −40%, a second batch the same day −21%; the table pools both. Single runs swing by 2 to 4x, so read these as ranges, and run the audit on your own sessions before and after.
-- **Small models don't follow the rules on their own.** On Haiku 4.5 the rules alone changed nothing; the read guard (which stops whole reads of big files) brought −20%. On Sonnet, rules + guard did as well as the rules alone in the same batch (−22% vs −21%). That's why the plugin ships with the guard on.
+- **Small models don't follow the rules on their own.** On Haiku 4.5 the rules alone changed nothing; the read guard (which stops whole reads of big files) brought −20% to −28%. On Sonnet, rules + guard did as well as the rules alone in the same batch (−22% vs −21%). That's why the plugin ships with the guard on.
+- **The outline is a small gain, not a big one.** In batch 2 both guards ran side by side: −28% with the outline, −25% without, mostly on the data question (9 API calls instead of 12, $0.077 vs $0.086). Within the noise of 5 runs; it ships because it removes a search round-trip when the agent knows what it's looking for.
+- **One task was re-run.** In Haiku batch 2, `fix-build` first failed in every arm alike (3/5 each) because the sandbox blocked Apple's Python bytecode cache in `~/Library`. The harness now points that cache inside the run's folder, and the 15 `fix-build` runs were redone for all three arms; the table uses the redone runs.
 - **Tuning was kept apart from testing.** The rules were piloted first (v1, 30 runs: −23%) and changed once: one new rule (compute, don't read data) and two additions (check a file's size first; chain shell steps). The `add-feature` task was written before that change and never used to tune them: it shows the biggest gain.
 - Four small tasks on a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
 
@@ -196,7 +199,7 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 ## FAQ
 
-**Does it make the agent worse?** Not in the benchmark: every run is checked by a script, and the pass rate was the same in every arm (40/40 on Sonnet, 20/20 on Haiku). The guardrails are explicit: a leak is cheaper than a wrong fix.
+**Does it make the agent worse?** Not in the benchmark: every run is checked by a script, and the pass rate was the same in every arm (40/40 on Sonnet, 60/60 per batch on Haiku). The guardrails are explicit: a leak is cheaper than a wrong fix.
 
 **My agent already does some of this.** Good agents do. Claude Code, for one, already blocks re-reading an unchanged file; the audit counts those blocked attempts as wasted round-trips. The audit tells you how much is left on your own sessions, not on a demo.
 

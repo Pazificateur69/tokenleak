@@ -1,0 +1,21 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 4,
+  "wall_s": 28.3,
+  "pass": true,
+  "cost_usd": 0.0860592,
+  "num_turns": 10,
+  "session_id": "0fd7e612-0986-420a-96c2-426025c47543",
+  "answer": "All tests pass! The issue was in `/shopcart/pricing.py:14`. The `bulk_discount` function was checking `if qty > BULK_THRESHOLD:` when it should check `if qty >= BULK_THRESHOLD:` to apply the discount at the threshold (10 units) and above, not just above. The docstring states \"when buying BULK_THRESHOLD units or more\", confirming the discount should apply at the threshold.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 382502,
+  "output_tokens": 2355,
+  "max_context": 51991,
+  "leak_pct": 4.97,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

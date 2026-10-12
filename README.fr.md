@@ -7,13 +7,13 @@ Rien à voir avec des clés API qui fuient : il s'agit des tokens que ton agent 
 
 <p align="center"><a href="README.md">English</a></p>
 
-**−32 % de coût sur 80 runs A/B avec Sonnet 5, même taux de réussite (40/40) ; −20 % sur Haiku 4.5 grâce au garde-fou de lecture.** Méthode et limites : [section Benchmark](README.md#benchmark).
+**−32 % de coût sur 80 runs A/B avec Sonnet 5, même taux de réussite (40/40) ; −20 à −28 % sur Haiku 4.5 grâce au garde-fou de lecture (deux lots, 120 runs).** Méthode et limites : [section Benchmark](README.md#benchmark).
 
 ## Pourquoi
 
 Dans une boucle d'agent, **chaque résultat d'outil qui entre dans le contexte est renvoyé à chaque appel suivant**, jusqu'à la compaction. Un log de tests de 6k tokens lu à l'appel 5 d'une session de 60 appels est payé ~55 fois de plus. Chaque aller-retour supplémentaire renvoie tout le contexte.
 
-La facture ne dépend donc pas de la longueur des réponses de l'agent, mais de **ce qu'il laisse entrer dans son contexte, et quand**. Raccourcir les réponses économise la partie bon marché ; sur de vraies sessions de code, l'essentiel du coût vient des relectures de contexte.
+La facture ne dépend donc pas de la longueur des réponses de l'agent, mais de **ce qu'il laisse entrer dans son contexte, et quand**. Dans les runs du [benchmark](README.md#benchmark) sans tokenleak, tout ce que le modèle a écrit (réponses, appels d'outils, réflexion) pesait 7 % du coût d'un run sur Sonnet et 10 % sur Haiku (médianes) ; le reste, c'était du contexte. Raccourcir les réponses économise la petite part. L'audit montre cette répartition sur vos propres sessions.
 
 tokenleak fait deux choses :
 
@@ -22,7 +22,7 @@ tokenleak fait deux choses :
 
 ## Installation
 
-**Claude Code (plugin, recommandé)** : règles injectées au démarrage, après compaction et dans chaque sous-agent, plus un **garde-fou de lecture** (la lecture entière d'un gros fichier texte est stoppée avec sa taille et le conseil de chercher d'abord ; passer `limit` passe toujours) et le skill `/tokenleak`. Désactivable avec `TOKENLEAK_GUARD=0`.
+**Claude Code (plugin, recommandé)** : règles injectées au démarrage, après compaction et dans chaque sous-agent, plus un **garde-fou de lecture** (la lecture entière d'un gros fichier texte est stoppée ; pour du code ou du Markdown, l'agent reçoit à la place le plan du fichier, définitions ou titres avec leurs numéros de ligne, pour ne lire que la partie utile ; passer `limit` passe toujours) et le skill `/tokenleak`. Désactivable avec `TOKENLEAK_GUARD=0`.
 
 ```
 /plugin marketplace add Pazificateur69/tokenleak

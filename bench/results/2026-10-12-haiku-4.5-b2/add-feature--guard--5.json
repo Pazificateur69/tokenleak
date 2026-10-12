@@ -1,0 +1,21 @@
+{
+  "task": "add-feature",
+  "variant": "guard",
+  "run": 5,
+  "wall_s": 49.8,
+  "pass": true,
+  "cost_usd": 0.1458227,
+  "num_turns": 20,
+  "session_id": "4c51945c-6994-4a01-8b8b-bd41c880ee55",
+  "answer": "Done! I've added a `--category NAME` option to tools/report.py that filters orders to only include products in the specified category. The implementation:\n\n1. Added argument parsing with `argparse` to handle the `--category` option\n2. Added a `category` parameter to the `main()` function\n3. Skips orders whose product's category doesn't match when a category is specified\n4. Preserves the summary line at the end\n\nTesting confirms it works:\n- `python3 -m tools.report data/orders.csv --category toys",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 20,
+  "context_tokens": 931028,
+  "output_tokens": 3774,
+  "max_context": 50801,
+  "leak_pct": 2.93,
+  "leaks": {
+    "serial-call": 1
+  },
+  "escaped": false
+}

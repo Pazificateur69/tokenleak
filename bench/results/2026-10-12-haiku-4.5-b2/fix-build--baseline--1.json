@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 31.0,
+  "pass": true,
+  "cost_usd": 0.0831385,
+  "num_turns": 8,
+  "session_id": "fa327406-3fb0-4c35-b232-3cb68395bbf4",
+  "answer": "Build fixed! The issue was that `tools/report.py` was calling `shipping.ship_cost_for()` which didn't exist. The shipping module had the function named `ship_cost()` instead. I added an alias `ship_cost_for = ship_cost` to make the function available under the expected name.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 381263,
+  "output_tokens": 1994,
+  "max_context": 51469,
+  "leak_pct": 5.35,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

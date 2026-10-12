@@ -1,0 +1,21 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 37.3,
+  "pass": true,
+  "cost_usd": 0.14433200000000002,
+  "num_turns": 15,
+  "session_id": "f503f7d1-5eb2-465e-b402-1ff6e7b8f2bf",
+  "answer": "Excellent! The `--category` option is working correctly. The implementation:\n\n1. \u2705 Accepts `--category NAME` argument\n2. \u2705 Filters orders by product category \n3. \u2705 Works with the command format: `python3 -m tools.report data/orders.csv --category toys`\n4. \u2705 Still ends with the summary line (e.g., `report: 300 orders, revenue 104343,11 EUR`)\n\nThe feature successfully filters to only orders whose products belong to the specified category, and the command runs without errors.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 10,
+  "context_tokens": 593873,
+  "output_tokens": 3290,
+  "max_context": 69068,
+  "leak_pct": 20.5,
+  "leaks": {
+    "big-read": 1
+  },
+  "escaped": false
+}

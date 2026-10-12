@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 5,
+  "wall_s": 28.0,
+  "pass": true,
+  "cost_usd": 0.0823012,
+  "num_turns": 9,
+  "session_id": "17d95f3f-bc0f-4b6a-8d96-4d9f11a3bb6a",
+  "answer": "Fixed! The build now passes. The issue was a function name mismatch: `tools/report.py` was calling `shipping.ship_cost_for()` when the actual function in `shopcart/shipping.py` is named `ship_cost()`.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 376859,
+  "output_tokens": 1592,
+  "max_context": 52323,
+  "leak_pct": 4.99,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

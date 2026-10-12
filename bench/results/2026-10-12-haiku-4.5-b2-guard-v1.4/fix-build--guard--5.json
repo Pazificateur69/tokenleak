@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "guard",
+  "run": 5,
+  "wall_s": 32.8,
+  "pass": true,
+  "cost_usd": 0.0895732,
+  "num_turns": 10,
+  "session_id": "2e0c368e-1c94-4c88-bd59-53c4be41e4f5",
+  "answer": "Build now passes! The issue was that `report.py` was calling `shipping.ship_cost_for()` but the function in `shipping.py` was named `ship_cost()`. I added an alias to export the function with the expected name.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 397360,
+  "output_tokens": 2028,
+  "max_context": 53924,
+  "leak_pct": 4.77,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

@@ -1,0 +1,21 @@
+{
+  "task": "find-answer",
+  "variant": "guard",
+  "run": 2,
+  "wall_s": 32.7,
+  "pass": true,
+  "cost_usd": 0.08634900000000001,
+  "num_turns": 11,
+  "session_id": "5854592d-6020-4621-8699-776c7c4f6ec0",
+  "answer": "9",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 11,
+  "context_tokens": 490226,
+  "output_tokens": 1572,
+  "max_context": 48528,
+  "leak_pct": 15.18,
+  "leaks": {
+    "serial-call": 3
+  },
+  "escaped": false
+}

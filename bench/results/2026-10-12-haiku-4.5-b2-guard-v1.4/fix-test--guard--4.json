@@ -1,0 +1,21 @@
+{
+  "task": "fix-test",
+  "variant": "guard",
+  "run": 4,
+  "wall_s": 25.5,
+  "pass": true,
+  "cost_usd": 0.08333610000000001,
+  "num_turns": 8,
+  "session_id": "38038426-ef25-46af-beb2-e80e799a7644",
+  "answer": "Perfect! All tests now pass. The fix was simple: change the comparison operator from `>` to `>=` in the `bulk_discount` function. This ensures the bulk discount is applied when quantity reaches the threshold (10 units), not just exceeds it.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 384188,
+  "output_tokens": 1755,
+  "max_context": 52053,
+  "leak_pct": 5.13,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

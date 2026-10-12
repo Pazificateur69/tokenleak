@@ -1,0 +1,23 @@
+{
+  "task": "add-feature",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 63.4,
+  "pass": true,
+  "cost_usd": 0.2116044,
+  "num_turns": 17,
+  "session_id": "f780a90f-f4df-46c3-b1cc-fa10305aab8d",
+  "answer": "Done! I've added a `--category NAME` option to tools/report.py. The implementation:\n\n1. **Added argparse** to handle command-line arguments\n2. **Modified main()** to accept an optional `category` parameter\n3. **Added filtering** that skips orders whose product category doesn't match (line 14-15)\n4. **Preserves the summary line** at the end\n\nTesting shows it works correctly:\n- `python3 -m tools.report data/orders.csv --category toys` filters to 300 toy orders and ends with `report: 300 orders, re",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 17,
+  "context_tokens": 1089890,
+  "output_tokens": 4121,
+  "max_context": 76155,
+  "leak_pct": 22.64,
+  "leaks": {
+    "big-read": 1,
+    "wide-search": 1,
+    "serial-call": 1
+  },
+  "escaped": false
+}

@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -736,6 +736,7 @@ def summarize(threads):
     """-> (totals, by_kind, findings sorted by cost) for a set of threads."""
     findings, units, sess, loaded, firsts, base_cost = [], 0.0, {}, {}, [], 0.0
     projects, per_thread = {}, []
+    split = {"cache_read": 0.0, "cache_write": 0.0, "output": 0.0}  # cost units; cache_write includes uncached input
     for t in threads:
         try:
             fs, u = analyze(t)
@@ -773,8 +774,12 @@ def summarize(threads):
         s["leak"] += sum(f.cost for f in fs)
         if t.cost_usd is not None:
             s["usd"] = max(s["usd"] or 0, t.cost_usd)
-        for c in t.calls:  # free memory early: transcripts can be huge
-            c.tools = []
+        w = weights(t)
+        for c in t.calls:
+            split["cache_read"] += w["read"] * c.cread
+            split["output"] += w["out"] * c.out
+            split["cache_write"] += call_cost(t, c, w) - w["read"] * c.cread - w["out"] * c.out
+            c.tools = []  # free memory early: transcripts can be huge
         for r in t.results:
             r.text = ""
     leak = sum(f.cost for f in findings)
@@ -805,6 +810,8 @@ def summarize(threads):
         "fresh_tokens": sum(c.fresh for t in threads for c in t.calls),
         "output_tokens": sum(c.out for t in threads for c in t.calls),
         "cost_units": units,
+        "cost_split_pct": {k: round(100 * v / units, 1) if units else 0
+                           for k, v in dict(split, context=split["cache_read"] + split["cache_write"]).items()},
         "leak_units": leak,
         "leak_pct": pct,
         "grade": grade(pct),
@@ -825,17 +832,37 @@ def summarize(threads):
     return totals, by_kind, findings
 
 
+def tool_name(tool):
+    """mcp__<server>__<tool> -> server:tool, dropping a server id that is only a UUID."""
+    parts = str(tool).split("__")
+    if len(parts) < 3 or parts[0] != "mcp":
+        return str(tool)
+    server = "" if re.fullmatch(r"[0-9a-f-]{16,}", parts[1]) else parts[1]
+    return f"{server or 'mcp'}:{'__'.join(parts[2:])}"
+
+
 def label_of(f, redact):
     if f.kind == "verbose-reply":
         return "assistant reply"
+    tool = tool_name(f.tool)
     if redact:
-        return f.tool
+        return tool
     lab = re.sub(r"\s+", " ", str(f.label)).strip()
     cwd = (f.thread.cwd or "").rstrip("/")
     if cwd:  # paths relative to the session's project
         lab = re.sub(r'cd "?' + re.escape(cwd) + r'"? *&& *', "", lab).replace(cwd + "/", "")
     lab = lab.replace(os.path.expanduser("~"), "~")
-    return f"{f.tool} {lab}" if lab and lab != f.tool else f.tool
+    return f"{tool} {lab}" if lab and lab != f.tool else tool
+
+
+def fit(lab, width):
+    """Shorten a label to width; a path keeps its end (the file name), anything else its start."""
+    if len(lab) <= width:
+        return lab
+    tool, _, rest = lab.partition(" ")
+    if rest and " " not in rest and ("/" in rest or "\\" in rest) and width - len(tool) - 2 > 0:
+        return f"{tool} …{rest[len(rest) - (width - len(tool) - 2):]}"
+    return lab[: width - 1] + "…"
 
 
 def print_report(totals, by_kind, findings, since, args, out=None):
@@ -856,6 +883,9 @@ def print_report(totals, by_kind, findings, since, args, out=None):
       f"   output {fmt(totals['output_tokens'])}\n")
     if totals["usd_total"]:
         w(f"  spend              ≈ ${totals['usd_total']:,.2f} API-equivalent {st('2', '(Claude Code sessions, its own pricing)')}\n")
+    sp = totals["cost_split_pct"]
+    w(f"  cost split         context {sp['context']:.0f}% {st('2', '(cache reads ' + format(sp['cache_read'], '.0f') + '% · writes and uncached ' + format(sp['cache_write'], '.0f') + '%)')}"
+      f"   output {sp['output']:.0f}%\n")
     pct, g = totals["leak_pct"], totals["grade"]
     color = {"A": "32", "B": "32", "C": "33", "D": "31", "F": "31"}[g]
     money = f"   ≈ ${totals['usd_leak']:,.2f} avoidable" if totals["usd_leak"] else ""
@@ -897,8 +927,7 @@ def print_report(totals, by_kind, findings, since, args, out=None):
     width = 46
     for i, f in enumerate(findings[: args.top], 1):
         share = pct_str(100 * f.cost / totals["cost_units"] if totals["cost_units"] else 0)
-        lab = label_of(f, args.redact)
-        lab = lab if len(lab) <= width else lab[: width - 1] + "…"
+        lab = fit(label_of(f, args.redact), width)
         if f.kind == "serial-call":
             size = "extra round-trip"
         else:
@@ -1025,6 +1054,7 @@ def write_html(totals, by_kind, findings, since, args, path):
 <div class="card"><div class="k">Spend (API-equivalent)</div><div class="v">{spend}</div></div>
 <div class="card"><div class="k">Context processed</div><div class="v">{fmt(totals['context_tokens'])}</div></div>
 </div>
+<p class="meta">Cost split: context {totals['cost_split_pct']['context']:.0f}% (cache reads {totals['cost_split_pct']['cache_read']:.0f}%, cache writes and uncached input {totals['cost_split_pct']['cache_write']:.0f}%), output {totals['cost_split_pct']['output']:.0f}%. Context is what the model reads, output what it writes.</p>
 <h2>Where it leaks</h2>{rows or '<p class="meta">No leaks found. Your agent is lean.</p>'}
 <h2>Top leaks</h2><table><tr><th>Of cost</th><th>Kind</th><th>What</th><th>Size</th></tr>{leaks}</table>
 {projects}
@@ -1238,13 +1268,70 @@ def suggest(threads, out=None, since=0.0):
 
 
 GUARD_SKIP = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg", ".pdf", ".ipynb")
+# Lines worth a jump in a big file: definitions in most languages (a keyword, a name, then what follows a name in
+# code, not in prose like "class that ..."), module-level constants, Markdown headings.
+OUTLINE_CODE = re.compile(
+    r"^[ \t]*(?:(?:(?:export|default|pub(?:\([\w:]+\))?|async|public|private|protected|internal|abstract|final|sealed"
+    r"|static|partial|open|data|unsafe)\s+)*"
+    r"(?:(?:def|class|function\*?|func|fn|fun|struct|enum|trait|interface|module|mod|type)\s+[\w$]+(?:\.[\w$]+)*"
+    r"(?:\s*(?:[(:<{=;\[]|$)|\s+(?:extends|implements|for|struct|interface|where)\b)|impl\b|func\s+\()"
+    r"|(?:export\s+)?(?:const|let|var)\s+[\w$]+\s*=\s*(?:async\s+)?"
+    r"(?:function\b|\([^)]*\)\s*(?::[^=]+)?=>|[\w$]+\s*=>)"
+    r"|(?:public|private|protected|internal|static|override)\s[^;=]*\()")
+OUTLINE_CONST = re.compile(r"[A-Z_][A-Z0-9_]*\s*(?::[^=]*)?=(?!=)")  # module-level constants, after definitions
+OUTLINE_MD = re.compile(r"#{1,4}\s+\S")
+OUTLINE_MAX = 60  # ~10 tokens a row: still a fraction of the file it replaces
+OUTLINE_SKIP = (".log", ".txt", ".out", ".json", ".jsonl", ".ndjson", ".xml", ".html", ".htm", ".css", ".lock", ".map",
+                ".min.js", ".sql")
+
+
+def outline(path, text):
+    """-> the lines of a big file worth jumping to, as `line: text` (1-based, like Read's offset).
+
+    Outermost first: whole nesting levels while they fit; a top level too long to fit is sampled evenly over the file.
+    """
+    low = path.lower()
+    if low.endswith(OUTLINE_SKIP):  # logs and data: no structure worth a map, grep is the way in
+        return []
+    lines = text.lstrip("﻿").split("\n")
+    if low.endswith((".csv", ".tsv")):
+        first = lines[0].strip()
+        return [f"1: {first[:160]}  (header)"] if first else []
+    md = low.endswith((".md", ".markdown", ".mdx"))
+    groups, fence = {}, False  # (depth, is_constant) -> [(line, text)]
+    for n, line in enumerate(lines, 1):
+        line = line.rstrip("\r")
+        if md:
+            if line.lstrip().startswith(("```", "~~~")):
+                fence = not fence  # a "# comment" in a code block is not a heading
+            elif not fence and OUTLINE_MD.match(line):
+                groups.setdefault((len(line) - len(line.lstrip("#")), False), []).append((n, line[:70]))
+        elif OUTLINE_CODE.match(line) or OUTLINE_CONST.match(line):
+            key = (len(line) - len(line.lstrip()), not OUTLINE_CODE.match(line))
+            groups.setdefault(key, []).append((n, line.strip()[:70]))
+    keep, step = [], 1
+    for key in sorted(groups):
+        group = groups[key]
+        if keep and len(keep) + len(group) > OUTLINE_MAX:
+            break
+        if len(group) > OUTLINE_MAX:
+            step = -(-len(group) // OUTLINE_MAX)
+            group = group[::step]
+        keep += group
+    rows = [f"{n}: {t}" for n, t in sorted(keep)]
+    more = sum(map(len, groups.values())) - len(keep)
+    if more:
+        why = f"1 in {step} outer ones listed, the rest nested or constants" if step > 1 else "nested or constants"
+        rows.append(f"... {more} more not shown ({why}); grep -n for them")
+    return rows
 
 
 def guard(stdin, out=None):
     """Claude Code PreToolUse hook on Read: stop whole-file reads of big text files.
 
-    The model gets the file size and how to read only what it needs; passing `limit` (or `offset`) always goes
-    through, so a whole read stays possible. Disable with TOKENLEAK_GUARD=0, tune with TOKENLEAK_GUARD_BYTES.
+    The model gets the file size, an outline with line numbers so it can read just the part it needs, and how to
+    read it all anyway: passing `limit` (or `offset`) always goes through. Disable with TOKENLEAK_GUARD=0, tune with
+    TOKENLEAK_GUARD_BYTES.
     """
     out = out or sys.stdout
     if os.environ.get("TOKENLEAK_GUARD", "1") == "0":
@@ -1253,7 +1340,11 @@ def guard(stdin, out=None):
         event = json.loads(stdin.read() or "{}")
     except ValueError:
         return
+    if not isinstance(event, dict):
+        return
     inp = event.get("tool_input") or {}
+    if not isinstance(inp, dict):
+        return
     path = str(inp.get("file_path") or "")
     if event.get("tool_name") != "Read" or inp.get("limit") or inp.get("offset") or not path \
             or path.lower().endswith(GUARD_SKIP):
@@ -1263,15 +1354,21 @@ def guard(stdin, out=None):
         if size <= int(os.environ.get("TOKENLEAK_GUARD_BYTES", "24000")):
             return
         with open(path, "rb") as fh:
-            head = fh.read(4096)
-            if b"\0" in head:  # binary: let the Read tool decide
+            head = fh.read(1 << 22)  # outline the first 4 MB; count the rest
+            if b"\0" in head[:4096]:  # binary: let the Read tool decide
                 return
-            lines = head.count(b"\n") + sum(chunk.count(b"\n") for chunk in iter(lambda: fh.read(1 << 16), b""))
+            head_lines = head.count(b"\n")
+            lines = head_lines + sum(chunk.count(b"\n") for chunk in iter(lambda: fh.read(1 << 16), b""))
     except (OSError, ValueError):
         return
-    reason = (f"tokenleak: {os.path.basename(path)} is {lines} lines (~{fmt(size / CHARS_PER_TOKEN)} tokens) and every "
-              f"later call would re-send it. Find what you need first (grep -n or Grep), then Read with offset and limit. "
+    rows = outline(path, head.decode("utf-8", "replace"))
+    partial = f", first {head_lines:,} lines only" if len(head) < size else ""
+    reason = (f"tokenleak: {os.path.basename(path)} is {lines:,} lines (~{fmt(size / CHARS_PER_TOKEN)} tokens) and every "
+              f"later call would re-send it. Read only the part you need with offset and limit"
+              + (" (outline below)" if rows else "") + ", or grep -n first. "
               f"If you really need the whole file, call Read again with limit: {lines + 1}.")
+    if rows:
+        reason += f"\nOutline (line: text{partial}):\n" + "\n".join("  " + r for r in rows)
     json.dump({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
                                       "permissionDecisionReason": reason}}, out)
 
