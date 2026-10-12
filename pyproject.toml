@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tokenleak"
+dynamic = ["version"]
+description = "Find and plug your coding agent's token leaks: audit Claude Code and Codex transcripts locally."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+authors = [{ name = "Pazificateur69" }]
+keywords = ["claude-code", "codex", "tokens", "llm", "agents", "cost"]
+classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Environment :: Console"]
+
+[project.urls]
+Homepage = "https://pazificateur69.github.io/tokenleak/"
+Repository = "https://github.com/Pazificateur69/tokenleak"
+
+[project.scripts]
+tokenleak = "tokenleak:main"
+
+[tool.setuptools]
+py-modules = ["tokenleak"]
+package-dir = { "" = "skills/tokenleak/scripts" }
+
+[tool.setuptools.dynamic]
+version = { attr = "tokenleak.__version__" }

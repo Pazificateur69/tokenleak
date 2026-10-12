@@ -1108,8 +1108,12 @@ def suggest(threads, out=None, since=0.0):
 def print_rules(out=None):
     out = out or sys.stdout
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
-    with open(path, encoding="utf-8") as f:
-        text = f.read()
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except OSError:  # installed as a bare CLI (uvx/pipx): the rules live in the skill
+        out.write(f"The rules ship with the skill: {REPO}/blob/main/skills/tokenleak/SKILL.md\n")
+        return
     parts = text.split("\n---\n", 1)
     out.write(parts[1].lstrip() if text.startswith("---") and len(parts) == 2 else text)
 

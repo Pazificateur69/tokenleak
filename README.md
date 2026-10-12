@@ -16,7 +16,7 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 <a href="https://pazificateur69.github.io/tokenleak/">Website</a> · <a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="README.fr.md">Français</a>
 </p>
 
-<p align="center"><img src="assets/demo.svg" alt="tokenleak audit output" width="900"></p>
+<p align="center"><img src="assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
 **−40% cost on a 40-run A/B benchmark, same pass rate (20/20).** [Details](#benchmark).
 
@@ -68,7 +68,9 @@ curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skill
 curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 30d
 ```
 
-Or from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
+Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak tokenleak` (or `pipx install git+https://github.com/Pazificateur69/tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
+
+<p align="center"><img src="assets/demo.svg" alt="tokenleak audit output: leak score, leak kinds with the rule that fixes each, top leaks" width="900"></p>
 
 | flag | |
 |---|---|
