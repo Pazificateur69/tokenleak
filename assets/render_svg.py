@@ -9,7 +9,25 @@ import sys
 FG = {"31": "#ff6b6b", "32": "#5af78e", "33": "#f3f99d"}
 LINE_H, CHAR_W, PAD, TOP = 19, 8.4, 20, 44
 
-lines = sys.stdin.read().rstrip("\n").split("\n")
+COLS = int(sys.argv[sys.argv.index("--cols") + 1]) if "--cols" in sys.argv else 0
+
+
+def clip(line):
+    """Cut a line to COLS visible characters, keeping ANSI codes intact."""
+    if not COLS or len(re.sub(r"\033\[[0-9;]*m", "", line)) <= COLS:
+        return line
+    out, seen = [], 0
+    for part in re.split(r"(\033\[[0-9;]*m)", line):
+        if part.startswith("\033"):
+            out.append(part)
+        elif seen < COLS - 1:
+            take = part[: COLS - 1 - seen]
+            out.append(take)
+            seen += len(take)
+    return "".join(out).rstrip() + "\u2026\033[0m"
+
+
+lines = [clip(l) for l in sys.stdin.read().rstrip("\n").split("\n")]
 width = int(max(len(re.sub(r"\033\[[0-9;]*m", "", l)) for l in lines) * CHAR_W + 2 * PAD)
 height = TOP + len(lines) * LINE_H + PAD
 out = [f'<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="{width}" height="{height}" '

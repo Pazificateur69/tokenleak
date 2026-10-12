@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tokenleak: stop paying the context tax</title>
+<meta name="description" content="Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks in your Claude Code and Codex sessions and plugs them. -40% cost on a 40-run A/B benchmark.">
+<meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)">
+<meta property="og:title" content="tokenleak: stop paying the context tax">
+<meta property="og:description" content="Lean-context rules for any coding agent, plus an audit of your own Claude Code and Codex sessions. -40% cost on a 40-run A/B benchmark, same pass rate.">
+<meta property="og:image" content="https://pazificateur69.github.io/tokenleak/og.png">
+<meta property="og:url" content="https://pazificateur69.github.io/tokenleak/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="brand" href="#top" aria-label="tokenleak home">
+      <img src="assets/logo.svg" alt="" width="28" height="28">
+      <span>tokenleak</span>
+    </a>
+    <nav aria-label="Primary">
+      <a href="#tax">How it works</a>
+      <a href="#benchmark">Benchmark</a>
+      <a href="#install">Install</a>
+      <a class="gh" href="https://github.com/Pazificateur69/tokenleak">
+        <span class="i i-github" aria-hidden="true"></span><span>GitHub</span><span class="stars" data-stars hidden></span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="top">
+    <div class="wrap hero-grid">
+      <div class="hero-copy reveal">
+        <h1>Stop paying the context&nbsp;tax.</h1>
+        <p class="lead">Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks and plugs them.</p>
+        <div class="ctas">
+          <a class="btn primary" href="#install">Install <span class="i i-arrow" aria-hidden="true"></span></a>
+          <a class="btn ghost" href="https://github.com/Pazificateur69/tokenleak"><span class="i i-github" aria-hidden="true"></span>Source</a>
+        </div>
+      </div>
+      <figure class="hero-shot reveal">
+        <img src="assets/demo-hero.svg" width="880" height="558" alt="Terminal output of the tokenleak audit: leak score 16.4 percent, grade C, with big file reads as the main leak and the rule that fixes each one.">
+        <figcaption>The audit, run on 20 agent sessions that did not have the rules.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="proof" aria-label="Benchmark results in brief">
+    <div class="wrap proof-row">
+      <div class="reveal"><strong>&minus;40%</strong><span>cost on a 40-run A/B benchmark in Claude Code</span></div>
+      <div class="reveal"><strong>20/20</strong><span>tasks passed, with and without the rules</span></div>
+      <div class="reveal"><strong>&minus;60%</strong><span>on the task held out from tuning the rules</span></div>
+    </div>
+  </section>
+
+  <section class="tax" id="tax">
+    <div class="wrap">
+      <h2>One log, paid on every call.</h2>
+      <p class="sub">An agent re-sends its whole context with each request. Whatever it reads early is billed again and again until the session ends or compacts.</p>
+
+      <div class="calc reveal">
+        <div class="controls">
+          <label><span class="lab"><span>Tool output size</span><span><output id="o-size">6,000</output> tokens</span></span>
+            <input type="range" id="size" min="500" max="20000" step="500" value="6000">
+          </label>
+          <label><span class="lab"><span>Read at call</span><span><output id="o-at">5</output></span></span>
+            <input type="range" id="at" min="1" max="119" step="1" value="5">
+          </label>
+          <label><span class="lab"><span>Session length</span><span><output id="o-len">60</output> calls</span></span>
+            <input type="range" id="len" min="10" max="120" step="1" value="60">
+          </label>
+        </div>
+        <div class="calls" id="calls" role="img" aria-label="Each square is one API call; highlighted squares re-send the tool output."></div>
+        <div class="readout">
+          <p class="first"><span class="big" id="r-times">55</span> later calls re-send it.</p>
+          <p>That one read costs as much as <strong id="r-equiv">6.75</strong> fresh reads of the same text.</p>
+          <p class="muted">Bounded to 800 tokens with <code>tail -n 40</code>, it would cost <strong id="r-save">87%</strong> less.</p>
+        </div>
+      </div>
+      <p class="fine">Claude pricing ratios: cache write 1.25&times;, cache read 0.1&times; of fresh input.</p>
+    </div>
+  </section>
+
+  <section class="parts" aria-label="What you get">
+    <div class="wrap bento">
+      <article class="cell rules reveal">
+        <h3>The rules</h3>
+        <p>A skill of about 850 tokens that changes what the agent asks for.</p>
+        <ol>
+          <li><b>Locate, then read.</b> Check the size, grep, read the range.</li>
+          <li><b>Compute, don't read.</b> Data questions get a one-liner.</li>
+          <li><b>Bound every command.</b> Log to a file, tail it, grep it.</li>
+          <li><b>Never re-read</b> what is already in context.</li>
+          <li><b>Batch independent calls</b> in one turn.</li>
+          <li><b>Diffs over files.</b> <code>git diff --stat</code> first.</li>
+          <li><b>Edit, don't rewrite.</b></li>
+          <li><b>Narrow searches and fetches.</b></li>
+          <li><b>Delegate wide exploration</b> to a subagent.</li>
+          <li><b>Answer lean.</b> Result first, no recap.</li>
+        </ol>
+        <p class="guard">Guardrails: never save tokens by hiding the real error, guessing a file, or skipping tests.</p>
+      </article>
+
+      <article class="cell audit reveal">
+        <h3>The audit</h3>
+        <p>Reads your own Claude Code and Codex transcripts, prices every oversized read, noisy log and wasted round-trip, and names the rule that fixes it.</p>
+        <pre><code>python3 tokenleak.py --since 30d</code></pre>
+        <p class="muted">Local and read-only. No network, no telemetry, standard library only.</p>
+      </article>
+
+      <article class="cell plugin reveal">
+        <h3>The plugin</h3>
+        <p>In Claude Code the rules load at session start, after every compaction, and inside every subagent you spawn.</p>
+        <p class="muted">It also shows what your <code>CLAUDE.md</code> and MCP servers cost you on every call.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="works" aria-label="Works with">
+    <div class="wrap works-row">
+      <h2 class="works-title">Works with any agent that reads skills.</h2>
+      <ul class="logos" aria-label="Compatible agents">
+        <li><span class="logo l-claude" role="img" aria-label="Claude Code"></span></li>
+        <li><span class="logo l-cursor" role="img" aria-label="Cursor"></span></li>
+        <li><span class="logo l-gemini" role="img" aria-label="Gemini CLI"></span></li>
+        <li><span class="logo l-copilot" role="img" aria-label="GitHub Copilot"></span></li>
+        <li><span class="logo l-windsurf" role="img" aria-label="Windsurf"></span></li>
+        <li><span class="logo l-cline" role="img" aria-label="Cline"></span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="bench" id="benchmark">
+    <div class="wrap">
+      <h2>Measured, not promised.</h2>
+      <p class="sub">Same prompt, a fresh copy of the same repo for every run, five runs per arm. The only difference is the rules in the system prompt. A script checks every result.</p>
+      <figure class="chart reveal">
+        <div class="legend" aria-hidden="true">
+          <span><i class="sw base"></i>Without the rules</span>
+          <span><i class="sw lean"></i>With tokenleak</span>
+        </div>
+        <div id="chart"></div>
+        <figcaption>Cost per run in Claude Code (Sonnet 5), as reported by Claude Code. Small dots are single runs, large dots are medians.</figcaption>
+        <details class="as-table">
+          <summary>View as table</summary>
+          <table>
+            <thead><tr><th>Task</th><th>Without</th><th>With tokenleak</th><th>Change</th><th>Passed</th></tr></thead>
+            <tbody id="table"></tbody>
+          </table>
+        </details>
+      </figure>
+      <ul class="honest">
+        <li>The rules were piloted first (30 runs, &minus;23%). Two rules were added after reading those transcripts, so the feature task was written beforehand and never used for tuning.</li>
+        <li>One model and four small tasks on a synthetic repo built around what leaks in real ones. Your numbers will differ: run the audit before and after.</li>
+        <li>Every run, the exact rules used and the harness are <a href="https://github.com/Pazificateur69/tokenleak/tree/main/bench">in the repo</a>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="install" id="install">
+    <div class="wrap install-grid">
+      <div>
+        <h2>Install in one line.</h2>
+        <p class="sub">Pick your setup. Everything is MIT licensed.</p>
+      </div>
+      <div class="tabs reveal">
+        <div class="tablist" role="tablist" aria-label="Install options">
+          <button role="tab" id="t-cc" aria-controls="p-cc" aria-selected="true">Claude Code</button>
+          <button role="tab" id="t-any" aria-controls="p-any" aria-selected="false" tabindex="-1">Any agent</button>
+          <button role="tab" id="t-md" aria-controls="p-md" aria-selected="false" tabindex="-1">AGENTS.md</button>
+          <button role="tab" id="t-audit" aria-controls="p-audit" aria-selected="false" tabindex="-1">Audit only</button>
+        </div>
+        <div class="panel" role="tabpanel" id="p-cc" aria-labelledby="t-cc">
+          <p>Plugin: rules in every session and subagent, plus the <code>/tokenleak</code> skill.</p>
+          <div class="cmd"><pre><code>/plugin marketplace add Pazificateur69/tokenleak
+/plugin install tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+        </div>
+        <div class="panel" role="tabpanel" id="p-any" aria-labelledby="t-any" hidden>
+          <p>Codex, Cursor, Gemini CLI, Copilot, Windsurf, Cline and 50+ more, through the open Agent Skills format.</p>
+          <div class="cmd"><pre><code>npx skills add Pazificateur69/tokenleak -g</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+        </div>
+        <div class="panel" role="tabpanel" id="p-md" aria-labelledby="t-md" hidden>
+          <p>Always on, no install: append the rules to your instructions file.</p>
+          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk 'f>=2;/^---$/{f++}' >> AGENTS.md</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+        </div>
+        <div class="panel" role="tabpanel" id="p-audit" aria-labelledby="t-audit" hidden>
+          <p>See your own leak score. Python 3.8+, nothing to install.</p>
+          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 30d</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <div class="wrap faq-grid">
+      <h2 id="faq-title">Questions</h2>
+      <div class="qs">
+        <details>
+          <summary>Does it make the agent worse?</summary>
+          <p>Not in the benchmark: 20 of 20 tasks passed in both arms, each checked by a script. The rules forbid saving tokens by guessing a file, hiding the error or skipping verification.</p>
+        </details>
+        <details>
+          <summary>Isn't shorter output enough?</summary>
+          <p>Output is the small part of the bill in agentic coding. Most of it is input context re-sent on every call. tokenleak works on what enters the context, and the audit shows the split on your own sessions.</p>
+        </details>
+        <details>
+          <summary>How accurate is the audit?</summary>
+          <p>Session totals and costs come straight from the transcripts. The size of each individual tool result is estimated at about four characters per token, and "avoidable" only counts what exceeds a sane budget, so it errs on the low side.</p>
+        </details>
+        <details>
+          <summary>What about rtk, caveman and the rest?</summary>
+          <p>They complement it. rtk compresses command output at the shell level and output-style skills shorten replies. tokenleak changes what the agent asks for and measures the result. Run the audit before and after anything you install.</p>
+        </details>
+        <details>
+          <summary>Does anything leave my machine?</summary>
+          <p>No. The audit reads files under <code>~/.claude/projects</code> and <code>~/.codex/sessions</code> and prints a report. It makes no network calls; the source is one readable Python file.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-row">
+    <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="22" height="22"><span>tokenleak</span></a>
+    <p>MIT licensed. Built by <a href="https://github.com/Pazificateur69">Pazificateur69</a>.</p>
+    <a href="https://github.com/Pazificateur69/tokenleak">GitHub</a>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
+<script src="app.js" defer></script>
+</body>
+</html>
