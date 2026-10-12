@@ -16,7 +16,7 @@
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -172,16 +172,18 @@
     <p class="works-title">Works with any agent that reads skills</p>
     <div class="marquee">
       <ul class="logos" aria-label="Compatible agents">
-        <li><span class="logo l-claude" role="img" aria-label="Claude Code"></span></li>
-        <li><span class="logo l-cursor" role="img" aria-label="Cursor"></span></li>
-        <li><span class="logo l-gemini" role="img" aria-label="Gemini CLI"></span></li>
-        <li><span class="logo l-copilot" role="img" aria-label="GitHub Copilot"></span></li>
-        <li><span class="logo l-windsurf" role="img" aria-label="Windsurf"></span></li>
-        <li><span class="logo l-cline" role="img" aria-label="Cline"></span></li>
-      </ul>
-      <ul class="logos" aria-hidden="true">
-        <li><span class="logo l-claude"></span></li><li><span class="logo l-cursor"></span></li><li><span class="logo l-gemini"></span></li>
-        <li><span class="logo l-copilot"></span></li><li><span class="logo l-windsurf"></span></li><li><span class="logo l-cline"></span></li>
+        <li title="Claude Code"><span class="logo l-claude" role="img" aria-label="Claude Code"></span></li>
+        <li title="Cursor"><span class="logo l-cursor" role="img" aria-label="Cursor"></span></li>
+        <li title="Gemini CLI"><span class="logo l-gemini" role="img" aria-label="Gemini CLI"></span></li>
+        <li title="GitHub Copilot"><span class="logo l-copilot" role="img" aria-label="GitHub Copilot"></span></li>
+        <li title="Windsurf"><span class="logo l-windsurf" role="img" aria-label="Windsurf"></span></li>
+        <li title="Cline"><span class="logo l-cline" role="img" aria-label="Cline"></span></li>
+        <li title="Amp"><span class="logo l-amp" role="img" aria-label="Amp"></span></li>
+        <li title="Warp"><span class="logo l-warp" role="img" aria-label="Warp"></span></li>
+        <li title="Zed"><span class="logo l-zed" role="img" aria-label="Zed"></span></li>
+        <li title="JetBrains Junie"><span class="logo l-jetbrains" role="img" aria-label="JetBrains Junie"></span></li>
+        <li title="OpenCode"><span class="logo l-opencode" role="img" aria-label="OpenCode"></span></li>
+        <li title="Qwen Code"><span class="logo l-qwen" role="img" aria-label="Qwen Code"></span></li>
       </ul>
     </div>
   </section>
@@ -191,6 +193,13 @@
       <h2>Measured, not promised.</h2>
       <p class="sub">Same prompt, a fresh copy of the same repo for every run, five runs per arm. The only difference is the rules in the system prompt. A script checks every result.</p>
       <figure class="chart glass reveal">
+        <div class="chart-head">
+          <div>
+            <p class="total-label">Sum of medians, 4 tasks</p>
+            <p class="total"><span>$1.07</span><span class="to" aria-label="to">&rarr;</span><span class="hi">$0.64</span></p>
+          </div>
+          <span class="big-pill">&minus;40% cost</span>
+        </div>
         <div class="legend" aria-hidden="true">
           <span><i class="sw base"></i>Without the rules</span>
           <span><i class="sw lean"></i>With tokenleak</span>
@@ -294,6 +303,6 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js?v=14" defer></script>
+<script src="app.js?v=15" defer></script>
 </body>
 </html>

@@ -137,6 +137,34 @@ document.querySelectorAll("[data-count]").forEach((s) => {
   }, 0.35);
 })();
 
+// Logo marquee: clone the logos until one copy is wider than the screen, then run two copies end to end
+(function marquee() {
+  const box = document.querySelector(".marquee");
+  if (!box) return;
+  const ul = box.querySelector(".logos"), originals = [...ul.children];
+  function build() {
+    box.querySelectorAll(".logos.twin").forEach((n) => n.remove());
+    ul.replaceChildren(...originals);
+    for (let guard = 0; ul.scrollWidth < box.clientWidth + 120 && guard < 12; guard++) {
+      originals.forEach((li) => {
+        const c = li.cloneNode(true);
+        c.setAttribute("aria-hidden", "true");
+        c.querySelector("[role]").removeAttribute("role");
+        ul.append(c);
+      });
+    }
+    const twin = ul.cloneNode(true);
+    twin.classList.add("twin");
+    twin.setAttribute("aria-hidden", "true");
+    twin.removeAttribute("aria-label");
+    box.append(twin);
+    box.style.setProperty("--dur", `${Math.round(ul.scrollWidth / 42)}s`);
+  }
+  build();
+  let w = box.clientWidth;
+  new ResizeObserver(() => { if (Math.abs(box.clientWidth - w) > 40) { w = box.clientWidth; build(); } }).observe(box);
+})();
+
 // Spotlight cards: the glow follows the pointer
 document.querySelectorAll(".spot").forEach((c) => {
   c.addEventListener("pointermove", (e) => {
@@ -185,7 +213,7 @@ function renderChart() {
   // Drawn at the container's real width so text stays at true size; narrow screens put labels above rows.
   const W = Math.max(300, Math.round(host.clientWidth || 900));
   const narrow = W < 640;
-  const rowH = narrow ? 96 : 74, top = narrow ? 34 : 12, left = narrow ? 6 : 210, right = narrow ? 50 : 70;
+  const rowH = narrow ? 96 : 78, top = narrow ? 34 : 14, left = narrow ? 6 : 220, right = narrow ? 56 : 76;
   const H = top + BENCH.length * rowH + 34 - (narrow ? 24 : 0);
   const x0 = 0.1, x1 = 0.5;
   const sx = (v) => left + (v - x0) / (x1 - x0) * (W - left - right);
@@ -199,6 +227,11 @@ function renderChart() {
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
     "aria-label": "Dot plot of cost per run for four tasks, without and with tokenleak. Medians: " +
       BENCH.map((r) => `${r.task} ${usd(median(r.base))} to ${usd(median(r.lean))}`).join("; ") + "." });
+  const defs = el("defs");
+  const marker = el("marker", { id: "arw", viewBox: "0 0 10 10", refX: "8", refY: "5", markerWidth: "7", markerHeight: "7", orient: "auto-start-reverse" });
+  marker.append(el("path", { d: "M0 0 L10 5 L0 10 z", class: "arrowhead" }));
+  defs.append(marker);
+  svg.append(defs);
   const grid = el("g", { class: "grid" }), axis = el("g", { class: "axis" });
   for (let v = 0.1; v <= 0.5001; v += narrow ? 0.2 : 0.1) {
     grid.append(el("line", { x1: sx(v), x2: sx(v), y1: top, y2: H - 30 }));
@@ -208,12 +241,26 @@ function renderChart() {
   BENCH.forEach((r, i) => {
     const y = top + i * rowH + rowH / 2 - (narrow ? 12 : 0);
     const mb = median(r.base), ml = median(r.lean);
+    const row = el("g", { class: "crow" });
+    row.append(el("rect", { class: "band", x: -10, y: y - rowH / 2 + (narrow ? -14 : 4), width: W + 20, height: rowH - 8, rx: 10 }));
+    svg.append(row);
     svg.append(el("text", { class: "task", x: 0, y: narrow ? y - 26 : y - 4 }, r.task + (narrow ? `, ${r.note}` : "")));
     if (!narrow) svg.append(el("text", { class: "val", x: 0, y: y + 15 }, r.note));
-    const link = el("line", { class: "link draw", x1: sx(mb), x2: sx(ml), y1: y, y2: y });
-    link.style.setProperty("--len", Math.abs(sx(mb) - sx(ml)));
-    link.style.setProperty("--d", `${i * 120}ms`);
-    svg.append(link);
+    const gap = Math.abs(sx(mb) - sx(ml));
+    if (gap > 16) {
+      const link = el("line", { class: "link draw", x1: sx(mb) - 9, x2: sx(ml) + 11, y1: y, y2: y, "marker-end": "url(#arw)" });
+      link.style.setProperty("--len", gap - 20);
+      link.style.setProperty("--d", `${i * 120}ms`);
+      svg.append(link);
+    }
+    if (!narrow) {
+      if (gap < 70) {
+        svg.append(el("text", { class: "mlabel", x: Math.max(sx(mb), sx(ml)) + 14, y: y + 4 }, mb === ml ? `${usd(ml)} both` : `${usd(mb)} to ${usd(ml)}`));
+      } else {
+        svg.append(el("text", { class: "mlabel", x: sx(mb) + 14, y: y + 4 }, usd(mb)));
+        svg.append(el("text", { class: "mlabel", x: sx(ml) - 14, y: y + 4, "text-anchor": "end" }, usd(ml)));
+      }
+    }
     for (const [key, runs] of [["base", r.base], ["lean", r.lean]]) {
       const label = key === "base" ? "without the rules" : "with tokenleak";
       runs.forEach((v, j) => {
@@ -228,7 +275,9 @@ function renderChart() {
       hit.dataset.tip = `${r.task}, ${label}, median: ${usd(m)}`;
       svg.append(hit);
     }
-    svg.append(el("text", { class: "delta", x: W - right + 14, y: y + 4 }, pct(mb, ml)));
+    const d = pct(mb, ml);
+    svg.append(el("rect", { class: d === "0%" ? "pill zero" : "pill", x: W - right + 6, y: y - 11, width: right - 8, height: 22, rx: 11 }));
+    svg.append(el("text", { class: d === "0%" ? "delta zero" : "delta", x: W - right / 2 + 2, y: y + 4, "text-anchor": "middle" }, d));
   });
   host.replaceChildren(svg);
 
