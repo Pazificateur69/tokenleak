@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tokenleak privacy</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css?v=7">
+<style>.doc{max-width:68ch;padding:56px 0 80px}.doc h1{font-size:2.4rem;margin-bottom:1rem}.doc h2{font-size:1.25rem;margin-top:2rem}.doc p,.doc li{color:var(--ink-2)}</style>
+</head>
+<body>
+<header class="nav"><div class="wrap nav-row"><a class="brand" href="./"><img src="assets/logo.svg" alt="" width="28" height="28"><span>tokenleak</span></a></div></header>
+<main class="wrap doc">
+  <h1>Privacy</h1>
+  <p>Last updated: 12 October 2026.</p>
+
+  <h2>The plugin, skill and audit</h2>
+  <p>tokenleak collects nothing. It has no telemetry, no analytics and makes no network requests.</p>
+  <ul>
+    <li>The rules are text added to your agent's context by a local hook. They stay between you and the AI provider you already use.</li>
+    <li>The audit (<code>tokenleak.py</code>) reads transcript files your agent already wrote on your machine (<code>~/.claude/projects</code>, <code>~/.codex/sessions</code>) and your instruction files (<code>CLAUDE.md</code>, <code>AGENTS.md</code>) to measure their size. It prints a report and writes nothing.</li>
+    <li>No credentials, API keys or account data are read.</li>
+  </ul>
+
+  <h2>This website</h2>
+  <p>The site is hosted on GitHub Pages and sets no cookies. Your browser fetches the star count from the public GitHub API. GitHub's <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">privacy statement</a> covers both.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue on <a href="https://github.com/Pazificateur69/tokenleak/issues">GitHub</a>.</p>
+</main>
+<footer class="foot"><div class="wrap foot-row"><a class="brand" href="./"><img src="assets/logo.svg" alt="" width="22" height="22"><span>tokenleak</span></a><p>MIT licensed.</p></div></footer>
+</body>
+</html>

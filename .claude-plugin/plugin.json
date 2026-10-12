@@ -6,7 +6,7 @@
     "name": "Pazificateur69",
     "url": "https://github.com/Pazificateur69"
   },
-  "homepage": "https://github.com/Pazificateur69/tokenleak",
+  "homepage": "https://pazificateur69.github.io/tokenleak/",
   "repository": "https://github.com/Pazificateur69/tokenleak",
   "license": "MIT",
   "keywords": [
@@ -17,5 +17,9 @@
     "audit",
     "claude-code",
     "codex"
-  ]
+  ],
+  "documentationUrl": "https://pazificateur69.github.io/tokenleak/",
+  "supportUrl": "https://github.com/Pazificateur69/tokenleak/issues",
+  "privacyPolicyUrl": "https://pazificateur69.github.io/tokenleak/privacy.html",
+  "termsOfServiceUrl": "https://github.com/Pazificateur69/tokenleak/blob/main/LICENSE"
 }
