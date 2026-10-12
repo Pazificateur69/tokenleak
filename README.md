@@ -6,7 +6,7 @@
 Not leaked API keys: the tokens your AI agent burns on context it didn't need.</p>
 
 <p align="center">
-<a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="README.fr.md">Français</a>
+<a href="https://pazificateur69.github.io/tokenleak/">Website</a> · <a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="README.fr.md">Français</a>
 </p>
 
 <p align="center"><img src="assets/demo.svg" alt="tokenleak audit output" width="900"></p>
