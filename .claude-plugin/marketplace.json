@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "tokenleak",
+  "description": "Find and plug your coding agent's token leaks.",
+  "owner": {
+    "name": "Pazificateur69",
+    "url": "https://github.com/Pazificateur69"
+  },
+  "plugins": [
+    {
+      "name": "tokenleak",
+      "description": "Token-lean rules injected at session start and into every subagent, plus /tokenleak to audit your own transcripts.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

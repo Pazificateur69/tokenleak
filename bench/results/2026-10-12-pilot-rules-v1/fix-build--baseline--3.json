@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 57.2,
+  "pass": true,
+  "cost_usd": 0.2796112,
+  "num_turns": 13,
+  "session_id": "7cf1a6ba-13ad-44a2-97a4-1e9b7b1b6506",
+  "answer": "The build now passes. Note: `python3 -m unittest` has one pre-existing failing test (`test_bulk_discount_at_threshold` in `tests/test_pricing.py`), unrelated to my change and not run by `build.sh` \u2014 flagging it in case you want it addressed separately.\n\n**Fix:** `tools/report.py` called `shipping.ship_cost_for(product)`, a typo \u2014 the module only defines `ship_cost(product)` (used correctly everywhere else: `cart.py`, all of `test_cart.py`). Changed the call site to `shipping.ship_cost(product)`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 11,
+  "context_tokens": 689571,
+  "output_tokens": 2871,
+  "max_context": 72806,
+  "leak_pct": 8.23,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false
+}

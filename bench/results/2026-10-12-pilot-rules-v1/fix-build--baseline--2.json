@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 44.0,
+  "pass": true,
+  "cost_usd": 0.2472202,
+  "num_turns": 10,
+  "session_id": "4d8d3b44-0b2f-4f61-91e7-632ebb48e7e9",
+  "answer": "Build now passes. The failure was in `tools/report.py`, which called `shipping.ship_cost_for(product)` \u2014 a function that doesn't exist. The real, tested API is `shipping.ship_cost(product)` (used elsewhere in `shopcart/cart.py` and throughout `tests/test_cart.py`), so I fixed the stale call site in `report.py` to use `ship_cost`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 563457,
+  "output_tokens": 2229,
+  "max_context": 72611,
+  "leak_pct": 8.94,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false
+}

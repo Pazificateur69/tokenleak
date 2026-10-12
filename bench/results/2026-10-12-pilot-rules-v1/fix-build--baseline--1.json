@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 55.3,
+  "pass": true,
+  "cost_usd": 0.2680718,
+  "num_turns": 11,
+  "session_id": "2f5541e2-86ff-4175-9cc1-29200247f064",
+  "answer": "`./build.sh` now completes successfully (`== build ok`, exit code 0).\n\n**Root cause:** `tools/report.py` called `shipping.ship_cost_for(product)`, but `shopcart/shipping.py` only defines `ship_cost(product)` (which is what `shopcart/cart.py` and all the tests correctly use). It was a typo'd call site, not a missing function \u2014 so I fixed the call in `tools/report.py` rather than renaming/duplicating the real API.\n\nNote: unrelated to this, `python3 -m unittest` has one pre-existing failing test (`",
+  "model": "claude-sonnet-5",
+  "api_calls": 10,
+  "context_tokens": 635916,
+  "output_tokens": 2675,
+  "max_context": 73110,
+  "leak_pct": 8.58,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false
+}

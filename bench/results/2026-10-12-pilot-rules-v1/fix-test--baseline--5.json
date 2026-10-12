@@ -1,0 +1,19 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 5,
+  "wall_s": 20.2,
+  "pass": true,
+  "cost_usd": 0.15807159999999998,
+  "num_turns": 8,
+  "session_id": "18849e20-0df9-4924-97e3-65ce8e251f9b",
+  "answer": "All 126 tests pass. The bug was an off-by-one in `shopcart/pricing.py:14` \u2014 `bulk_discount` used `qty > BULK_THRESHOLD`, excluding the threshold value itself, when the docstring and tests specify the discount applies \"when buying `BULK_THRESHOLD` units or more.\" Changed to `qty >= BULK_THRESHOLD`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 7,
+  "context_tokens": 397419,
+  "output_tokens": 1310,
+  "max_context": 60310,
+  "leak_pct": 0.0,
+  "leaks": {},
+  "escaped": false
+}

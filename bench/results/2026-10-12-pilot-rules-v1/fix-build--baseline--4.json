@@ -1,0 +1,22 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 4,
+  "wall_s": 40.8,
+  "pass": true,
+  "cost_usd": 0.2448444,
+  "num_turns": 11,
+  "session_id": "a0b8edfe-c5de-4e3b-88c3-a64ac40fd82a",
+  "answer": "Build passes now. The fix was a one-line typo: `tools/report.py` called a nonexistent `shipping.ship_cost_for(product)` instead of the real function `shipping.ship_cost(product)` (used correctly everywhere else in the codebase).",
+  "model": "claude-sonnet-5",
+  "api_calls": 9,
+  "context_tokens": 563148,
+  "output_tokens": 2028,
+  "max_context": 72531,
+  "leak_pct": 9.02,
+  "leaks": {
+    "noisy-shell": 1,
+    "wide-search": 1
+  },
+  "escaped": false
+}

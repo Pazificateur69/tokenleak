@@ -1,0 +1,21 @@
+{
+  "task": "fix-test",
+  "variant": "tokenleak",
+  "run": 2,
+  "wall_s": 34.1,
+  "pass": true,
+  "cost_usd": 0.14885120000000002,
+  "num_turns": 7,
+  "session_id": "18125b29-82a5-4589-8c9f-d021a2d0a9ef",
+  "answer": "All 126 tests pass. Root cause was an off-by-one in `bulk_discount` (`shopcart/pricing.py:14`): it used `qty > BULK_THRESHOLD`, excluding orders exactly at the threshold, contradicting its own docstring (\"...or more\"). Changed to `>=`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 7,
+  "context_tokens": 397310,
+  "output_tokens": 1073,
+  "max_context": 58522,
+  "leak_pct": 7.64,
+  "leaks": {
+    "serial-call": 1
+  },
+  "escaped": false
+}

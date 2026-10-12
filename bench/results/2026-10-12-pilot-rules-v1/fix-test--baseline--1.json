@@ -1,0 +1,19 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 27.9,
+  "pass": true,
+  "cost_usd": 0.1582304,
+  "num_turns": 8,
+  "session_id": "95e121fb-3310-4b04-9e91-3d546daf5dba",
+  "answer": "All 126 tests pass. The off-by-one bug in `shopcart/pricing.py:14` used `qty > BULK_THRESHOLD` instead of `qty >= BULK_THRESHOLD`, so an order of exactly 10 units got no bulk discount; changed to `>=`.",
+  "model": "claude-sonnet-5",
+  "api_calls": 7,
+  "context_tokens": 397828,
+  "output_tokens": 1236,
+  "max_context": 60525,
+  "leak_pct": 0.0,
+  "leaks": {},
+  "escaped": false
+}
