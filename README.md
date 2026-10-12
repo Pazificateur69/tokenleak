@@ -154,7 +154,7 @@ A/B tests in Claude Code (`claude -p`): same prompt, a fresh copy of the same sm
 | task | without | with the rules | change | passed |
 |---|---|---|---|---|
 | fix a failing test (chatty test logs) | $0.148 | $0.140 | −5% | 10/10 · 10/10 |
-| answer a question about data in a big module | $0.206 | $0.160 | **−22%** | 10/10 · 10/10 |
+| answer a question about data in a big module | $0.205 | $0.160 | **−22%** | 10/10 · 10/10 |
 | fix a build buried in 600 lines of output | $0.270 | $0.206 | **−24%** | 10/10 · 10/10 |
 | add a feature *(held out, see below)* | $0.450 | $0.222 | **−51%** | 10/10 · 10/10 |
 | **total** | **$1.07** | **$0.73** | **−32%** | **40/40 · 40/40** |
