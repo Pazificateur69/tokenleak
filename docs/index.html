@@ -15,7 +15,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -176,6 +176,7 @@
       <div class="tabs reveal">
         <div class="tablist" role="tablist" aria-label="Install options">
           <button role="tab" id="t-cc" aria-controls="p-cc" aria-selected="true">Claude Code</button>
+          <button role="tab" id="t-codex" aria-controls="p-codex" aria-selected="false" tabindex="-1">Codex</button>
           <button role="tab" id="t-any" aria-controls="p-any" aria-selected="false" tabindex="-1">Any agent</button>
           <button role="tab" id="t-md" aria-controls="p-md" aria-selected="false" tabindex="-1">AGENTS.md</button>
           <button role="tab" id="t-audit" aria-controls="p-audit" aria-selected="false" tabindex="-1">Audit only</button>
@@ -185,8 +186,13 @@
           <div class="cmd"><pre><code>/plugin marketplace add Pazificateur69/tokenleak
 /plugin install tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
+        <div class="panel" role="tabpanel" id="p-codex" aria-labelledby="t-codex" hidden>
+          <p>Plugin: rules at session start and in subagents. Then open <code>/hooks</code> to trust its hook.</p>
+          <div class="cmd"><pre><code>codex plugin marketplace add Pazificateur69/tokenleak
+codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+        </div>
         <div class="panel" role="tabpanel" id="p-any" aria-labelledby="t-any" hidden>
-          <p>Codex, Cursor, Gemini CLI, Copilot, Windsurf, Cline and 50+ more, through the open Agent Skills format.</p>
+          <p>Cursor, Gemini CLI, Copilot, Windsurf, Cline and 50+ more, through the open Agent Skills format.</p>
           <div class="cmd"><pre><code>npx skills add Pazificateur69/tokenleak -g</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
         <div class="panel" role="tabpanel" id="p-md" aria-labelledby="t-md" hidden>
@@ -239,6 +245,6 @@
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js?v=5" defer></script>
+<script src="app.js?v=6" defer></script>
 </body>
 </html>

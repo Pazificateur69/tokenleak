@@ -40,6 +40,15 @@ tokenleak does two things:
 /plugin install tokenleak@tokenleak
 ```
 
+**Codex (plugin).** Same rules at session start and in subagents, plus the skill:
+
+```bash
+codex plugin marketplace add Pazificateur69/tokenleak
+codex plugin add tokenleak@tokenleak
+```
+
+Then open `/hooks` in Codex to review and trust its lifecycle hook, and start a new thread.
+
 **Any agent that supports Agent Skills** (Codex, Cursor, Gemini CLI, GitHub Copilot, Windsurf, Cline, OpenCode and [50+ more](https://github.com/vercel-labs/skills#supported-agents)):
 
 ```bash
