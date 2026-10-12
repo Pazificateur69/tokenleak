@@ -1,0 +1,21 @@
+{
+  "task": "add-feature",
+  "variant": "tokenleak",
+  "run": 3,
+  "wall_s": 43.0,
+  "pass": true,
+  "cost_usd": 0.1314203,
+  "num_turns": 13,
+  "session_id": "6d508913-e43c-46f7-8845-df3fda4bee47",
+  "answer": "Done! I've added the `--category NAME` option to `tools/report.py`. Here's what was changed:\n\n1. **Added category filtering** \u2014 Products are now checked against the provided category and skipped if they don't match\n2. **Fixed a bug** \u2014 The code was calling `shipping.ship_cost_for()` which doesn't exist; it should be `shipping.ship_cost()`\n3. **Updated argument parsing** \u2014 The script now accepts the `--category toys` syntax\n\nThe command works as requested:\n- `python3 -m tools.report data/orders.c",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 13,
+  "context_tokens": 624738,
+  "output_tokens": 3180,
+  "max_context": 60931,
+  "leak_pct": 8.16,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

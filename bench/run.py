@@ -1,7 +1,7 @@
 """A/B benchmark: Claude Code with vs without the tokenleak rules, on identical tasks.
 
     python3 bench/run.py --runs 3 --model sonnet          # run + summarize
-    python3 bench/run.py --summarize bench/results/<dir>   # re-print a summary
+    python3 bench/run.py --summarize bench/results/<dir>   # re-print (and rewrite) its summary.md
 
 Each run gets a fresh copy of the fixture repo and a clean Claude Code: no user/global settings,
 CLAUDE.md, plugins, skills or MCP servers (--setting-sources project, --strict-mcp-config,
@@ -38,7 +38,8 @@ TASKS = {
                    "in that category. `python3 -m tools.report data/orders.csv --category toys` must work and end "
                    "with its usual summary line.",
 }
-VARIANTS = ("baseline", "tokenleak")
+VARIANTS = ("baseline", "tokenleak", "guard")  # guard = rules + the plugin's PreToolUse Read guard
+SCRIPT = os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")
 # Same for both variants: the agent can work in its repo (+ temp dirs) and cannot read your personal folders.
 HOME_DIRS = ["~/Desktop", "~/Documents", "~/Downloads", "~/Developer", "~/.claude", "~/.codex", "~/.ssh", "~/Library"]
 SANDBOX = {
@@ -128,11 +129,15 @@ def run_one(task, variant, i, args, outdir, rules):
     expected = fixture.write(work)
     snap = {"tests": digest(glob.glob(os.path.join(work, "tests", "*.py"))),
             "build": digest([os.path.join(work, "build.sh")])}
+    settings = dict(SANDBOX)
+    if variant == "guard":
+        settings["hooks"] = {"PreToolUse": [{"matcher": "Read", "hooks": [
+            {"type": "command", "command": f'python3 "{SCRIPT}" guard'}]}]}
     cmd = ["claude", "-p", TASKS[task], "--model", args.model, "--output-format", "json",
            "--setting-sources", "project", "--strict-mcp-config", "--disable-slash-commands",
            "--permission-mode", "bypassPermissions", "--max-turns", str(args.max_turns),
-           "--settings", json.dumps(SANDBOX)]
-    if variant == "tokenleak":
+           "--settings", json.dumps(settings)]
+    if variant in ("tokenleak", "guard"):
         cmd += ["--append-system-prompt-file", rules]
     t0 = time.time()
     try:
@@ -166,12 +171,13 @@ def summarize(outdir):
     if not recs:
         sys.exit(f"no results in {outdir}")
     med = statistics.median
-    rows, tot = [], {v: {"cost": 0.0, "ctx": 0.0, "out": 0.0} for v in VARIANTS}
+    present = [v for v in VARIANTS if any(r["variant"] == v for r in recs)]
+    rows, tot = [], {v: {"cost": 0.0, "ctx": 0.0, "out": 0.0} for v in present}
     lines = ["| task | variant | pass | cost (median) | context tokens (median) | output tokens (median) "
              "| API calls (median) | leak score (median) |",
              "|---|---|---|---|---|---|---|---|"]
     for task in TASKS:
-        for v in VARIANTS:
+        for v in present:
             rs = [r for r in recs if r["task"] == task and r["variant"] == v]
             if not rs:
                 continue
@@ -184,20 +190,24 @@ def summarize(outdir):
             lines.append(f"| {task} | {v} | {sum(r['pass'] for r in rs)}/{len(rs)} | ${c:.3f} | {T.fmt(x)} | "
                          f"{T.fmt(o)} | {med([r.get('api_calls', 0) for r in rs]):.0f} | "
                          f"{med([r.get('leak_pct', 0) for r in rs]):.1f}% |")
-    b, k = tot["baseline"], tot["tokenleak"]
-
-    def delta(key):
-        return f"{100 * (k[key] - b[key]) / b[key]:+.0f}%" if b[key] else "n/a"
-
     passes = {v: f"{sum(r['pass'] for r in recs if r['variant'] == v)}/{sum(1 for r in recs if r['variant'] == v)}"
-              for v in VARIANTS}
+              for v in present}
     models = sorted({r.get("model") for r in recs if r.get("model")})
-    lines += ["", f"**Sum of medians** — cost: ${b['cost']:.3f} → ${k['cost']:.3f} ({delta('cost')}), "
-                  f"context tokens: {T.fmt(b['ctx'])} → {T.fmt(k['ctx'])} ({delta('ctx')}), "
-                  f"output tokens: {T.fmt(b['out'])} → {T.fmt(k['out'])} ({delta('out')}). "
-                  f"Passed: baseline {passes['baseline']}, tokenleak {passes['tokenleak']}. "
-                  f"Model: {', '.join(models) or '?'}. "
-                  f"Runs that tried to leave the repo: {sum(1 for r in recs if r.get('escaped'))}."]
+    lines.append("")
+    b = tot.get("baseline")
+    for v in present:
+        if v == "baseline" or not b:
+            continue
+        k = tot[v]
+
+        def delta(key):
+            return f"{100 * (k[key] - b[key]) / b[key]:+.0f}%" if b[key] else "n/a"
+
+        lines.append(f"**Sum of medians, {v} vs baseline**: cost ${b['cost']:.3f} → ${k['cost']:.3f} ({delta('cost')}), "
+                     f"context tokens {T.fmt(b['ctx'])} → {T.fmt(k['ctx'])} ({delta('ctx')}), "
+                     f"output tokens {T.fmt(b['out'])} → {T.fmt(k['out'])} ({delta('out')}).")
+    lines.append(f"Passed: {', '.join(f'{v} {passes[v]}' for v in present)}. Model: {', '.join(models) or '?'}. "
+                 f"Runs that tried to leave the repo: {sum(1 for r in recs if r.get('escaped'))}.")
     text = "\n".join(lines) + "\n"
     with open(os.path.join(outdir, "summary.md"), "w") as f:
         f.write(text)
@@ -224,6 +234,7 @@ def main():
     ap.add_argument("--max-turns", type=int, default=40)
     ap.add_argument("--timeout", type=int, default=1200)
     ap.add_argument("--tasks", default=",".join(TASKS))
+    ap.add_argument("--variants", default="baseline,tokenleak", help="any of: baseline, tokenleak, guard")
     ap.add_argument("--workdir", default=tempfile.gettempdir())
     ap.add_argument("--out")
     ap.add_argument("--summarize")
@@ -238,7 +249,7 @@ def main():
     rules = os.path.join(outdir, "rules.md")
     with open(rules, "w") as f:
         T.print_rules(f)
-    jobs = [(t, v, i) for i in range(1, args.runs + 1) for t in args.tasks.split(",") for v in VARIANTS]
+    jobs = [(t, v, i) for i in range(1, args.runs + 1) for t in args.tasks.split(",") for v in args.variants.split(",")]
     print(f"{len(jobs)} runs -> {outdir}", flush=True)
     with cf.ThreadPoolExecutor(args.parallel) as ex:
         list(ex.map(lambda j: run_one(*j, args, outdir, rules), jobs))

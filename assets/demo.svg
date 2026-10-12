@@ -4,24 +4,24 @@
 <circle cx="22" cy="20" r="6" fill="#ff5f56"/><circle cx="42" cy="20" r="6" fill="#ffbd2e"/><circle cx="62" cy="20" r="6" fill="#27c93f"/>
 <g>
 <text x="20" y="44"></text>
-<text x="20" y="63"><tspan font-weight="bold">tokenleak</tspan><tspan> 1.0.0  </tspan><tspan fill="#8b949e">·</tspan><tspan>  20 sessions (20 Claude Code)  </tspan><tspan fill="#8b949e">·</tspan><tspan>  156 API calls  </tspan><tspan fill="#8b949e">·</tspan><tspan>  since the beginning</tspan></text>
+<text x="20" y="63"><tspan font-weight="bold">tokenleak</tspan><tspan> 1.4.0  </tspan><tspan fill="#8b949e">·</tspan><tspan>  20 sessions (20 Claude Code)  </tspan><tspan fill="#8b949e">·</tspan><tspan>  156 API calls  </tspan><tspan fill="#8b949e">·</tspan><tspan>  since the beginning</tspan></text>
 <text x="20" y="82"></text>
 <text x="20" y="101"><tspan>  context processed  </tspan><tspan font-weight="bold">11.1M</tspan><tspan> tokens  </tspan><tspan fill="#8b949e">(cache reads 10.4M · writes 757.6k · fresh 312)</tspan><tspan>   output 37.5k</tspan></text>
 <text x="20" y="120"></text>
-<text x="20" y="139"><tspan>  </tspan><tspan font-weight="bold">LEAK SCORE</tspan><tspan>  </tspan><tspan font-weight="bold" fill="#f3f99d">16.4%</tspan><tspan>  grade </tspan><tspan font-weight="bold" fill="#f3f99d">C</tspan><tspan>   </tspan><tspan fill="#8b949e">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</tspan></text>
+<text x="20" y="139"><tspan>  </tspan><tspan font-weight="bold">LEAK SCORE</tspan><tspan>  </tspan><tspan font-weight="bold" fill="#f3f99d">15.8%</tspan><tspan>  grade </tspan><tspan font-weight="bold" fill="#f3f99d">C</tspan><tspan>   </tspan><tspan fill="#8b949e">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</tspan></text>
 <text x="20" y="158"></text>
 <text x="20" y="177"><tspan fill="#8b949e">  leak            count   avoidable  of cost   fix</tspan></text>
-<text x="20" y="196"><tspan>  big-read           17      153.2k    14.3%   </tspan><tspan fill="#8b949e">Locate, then read: grep -n first, then read only that range</tspan></text>
-<text x="20" y="215"><tspan>  wide-search         4       11.4k     1.0%   </tspan><tspan fill="#8b949e">Narrow searches: scope path/type, cap results, -l for names only</tspan></text>
+<text x="20" y="196"><tspan>  big-read           17      153.2k    13.7%   </tspan><tspan fill="#8b949e">Locate, then read: grep -n first, then read only that range</tspan></text>
+<text x="20" y="215"><tspan>  wide-search         4       11.4k     0.9%   </tspan><tspan fill="#8b949e">Narrow searches: scope path/type, cap results, -l for names only</tspan></text>
 <text x="20" y="234"><tspan>  noisy-shell         4       10.0k     0.9%   </tspan><tspan fill="#8b949e">Bound every command: quiet flags, `&gt; log; tail -n 40 log`, grep the log</tspan></text>
-<text x="20" y="253"><tspan>  serial-call         1           —     0.3%   </tspan><tspan fill="#8b949e">Batch independent reads/searches in one turn</tspan></text>
+<text x="20" y="253"><tspan>  serial-call         1           -     0.3%   </tspan><tspan fill="#8b949e">Batch independent reads/searches in one turn</tspan></text>
 <text x="20" y="272"></text>
 <text x="20" y="291"><tspan>  </tspan><tspan font-weight="bold">always loaded</tspan><tspan>  ~43% of cost  </tspan><tspan fill="#8b949e">52.2k tok at session start (system prompt, tools, MCP), re-sent every call</tspan></text>
 <text x="20" y="310"></text>
 <text x="20" y="329"><tspan>  </tspan><tspan font-weight="bold">top leaks</tspan></text>
-<text x="20" y="348"><tspan>   1    1.1%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read ./shopcart/catalog.py                      </tspan><tspan fill="#8b949e">11.6k tok × 10 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-5 · 8e646bc9</tspan></text>
+<text x="20" y="348"><tspan>   1    1.0%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read ./shopcart/catalog.py                      </tspan><tspan fill="#8b949e">11.6k tok × 10 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-5 · 8e646bc9</tspan></text>
 <text x="20" y="367"><tspan>   2    1.0%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read shopcart/catalog.py                        </tspan><tspan fill="#8b949e">11.6k tok × 9 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-1 · 2f63434b</tspan></text>
-<text x="20" y="386"><tspan>   3    1.0%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read shopcart/catalog.py                        </tspan><tspan fill="#8b949e">11.6k tok × 8 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-3 · fdc877ce</tspan></text>
+<text x="20" y="386"><tspan>   3    0.9%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read shopcart/catalog.py                        </tspan><tspan fill="#8b949e">11.6k tok × 8 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-3 · fdc877ce</tspan></text>
 <text x="20" y="405"><tspan>   4    0.9%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read shopcart/catalog.py                        </tspan><tspan fill="#8b949e">11.6k tok × 7 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-2 · b61023fa</tspan></text>
 <text x="20" y="424"><tspan>   5    0.9%  </tspan><tspan fill="#f3f99d">big-read     </tspan><tspan> Read shopcart/catalog.py                        </tspan><tspan fill="#8b949e">11.6k tok × 6 later calls</tspan><tspan>  </tspan><tspan fill="#8b949e">add-feature-baseline-4 · 39130531</tspan></text>
 <text x="20" y="443"></text>

@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "baseline",
+  "run": 4,
+  "wall_s": 26.4,
+  "pass": true,
+  "cost_usd": 0.0855379,
+  "num_turns": 10,
+  "session_id": "95910ac9-8b08-40a8-875e-efa98c59f70a",
+  "answer": "Build fixed! The issue was in `tools/report.py:15` \u2014 it was calling `shipping.ship_cost_for(product)` but the function in `shopcart/shipping.py` is named `ship_cost(product)`. Changed the function call to use the correct name, and the build now passes.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 9,
+  "context_tokens": 417343,
+  "output_tokens": 2029,
+  "max_context": 50737,
+  "leak_pct": 5.2,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

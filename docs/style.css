@@ -129,7 +129,7 @@ h1 { font-size: clamp(2.25rem, 4.5vw, 4.05rem); font-weight: 700; letter-spacing
 .k.sys { background: var(--sys); box-shadow: inset 0 0 0 1px var(--line-2); } .k.conv { background: var(--conv); } .k.leak { background: var(--accent); box-shadow: 0 0 8px rgb(245 165 36 / .6); }
 .meter { margin: 0; font-size: .85rem; color: var(--muted); }
 .meter strong { font-family: var(--mono); font-size: 1.15rem; color: var(--accent-hi); font-weight: 600; margin: 0 2px; font-variant-numeric: tabular-nums; }
-.stack-card figcaption { color: #6d6d77; font-size: .76rem; margin-top: 8px; }
+.stack-card figcaption { color: #85858f; font-size: .76rem; margin-top: 8px; }
 @media (max-width: 560px) { #stack .note { font-size: 17px; } #stack .idx { font-size: 13px; } .stack-card { padding: 16px 14px 14px; } }
 
 /* Proof numbers */
@@ -176,11 +176,11 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; curs
 .term-bar span { margin-left: 10px; font: 12px var(--mono); color: var(--muted); }
 .term-body { margin: 0; padding: 16px 18px 18px; font-size: 10.6px; line-height: 1.62; color: #cfcfd6; overflow-x: auto; }
 .term-body .ln { display: block; white-space: pre; }
-.term-body .b { color: #fafafa; font-weight: 600; } .term-body .d { color: #6f6f7a; } .term-body .y { color: var(--accent-hi); }
+.term-body .b { color: #fafafa; font-weight: 600; } .term-body .d { color: #8b8b95; } .term-body .y { color: var(--accent-hi); }
 .term-body .g { color: var(--good); } .term-body .r { color: #ff7b7b; }
 .cmdline { display: block; margin-bottom: 8px; color: var(--ink); }
 .caret { display: inline-block; width: 7px; height: 1.1em; background: var(--accent); vertical-align: -2px; margin-left: 2px; }
-.term figcaption { color: #6d6d77; font-size: .76rem; padding: 0 18px 14px; }
+.term figcaption { color: #85858f; font-size: .76rem; padding: 0 18px 14px; }
 @media (max-width: 960px) { .audit-grid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Bento */

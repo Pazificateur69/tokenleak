@@ -1,0 +1,28 @@
+name: Bug report
+description: Something in the audit, the rules or the plugin doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Output of `tokenleak --version`
+      placeholder: tokenleak 1.3.0
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Agent and OS
+      placeholder: Claude Code 2.1 on macOS 15 / Codex CLI 0.15 on Windows 11 / ...
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output
+      description: Please run with `--redact` first so no paths or commands from your sessions end up in a public issue.
+      render: text

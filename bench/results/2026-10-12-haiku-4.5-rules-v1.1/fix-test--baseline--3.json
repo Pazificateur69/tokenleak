@@ -1,0 +1,21 @@
+{
+  "task": "fix-test",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 27.9,
+  "pass": true,
+  "cost_usd": 0.08664830000000001,
+  "num_turns": 8,
+  "session_id": "1d378c17-6c16-49b1-bebc-eab71f2ad969",
+  "answer": "Perfect! All tests pass now. \n\n**Root cause:** The `bulk_discount` function in `shopcart/pricing.py` was using `>` instead of `>=` for the threshold check. This meant the 10% bulk discount was only applied when quantity exceeded the threshold (>10), not when it met or exceeded it (>=10).\n\n**The fix:** Changed line 14 from `if qty > BULK_THRESHOLD:` to `if qty >= BULK_THRESHOLD:` to properly implement the documented behavior of \"10% off the line when buying BULK_THRESHOLD units or more.\"",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 8,
+  "context_tokens": 380278,
+  "output_tokens": 2371,
+  "max_context": 52376,
+  "leak_pct": 5.13,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

@@ -16,10 +16,11 @@ import os
 import re
 import shlex
 import sys
+import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -61,10 +62,10 @@ MUTATES_ALL = re.compile(r"git\s+(checkout|switch|stash|reset|pull|merge|rebase|
 # ---------------------------------------------------------------- model
 
 class Call:
-    __slots__ = ("pos", "seg", "fresh", "cread", "c5m", "c1h", "out", "tools", "text_chars")
+    __slots__ = ("pos", "seg", "fresh", "cread", "c5m", "c1h", "out", "tools", "text_chars", "ts")
 
-    def __init__(self, pos, seg):
-        self.pos, self.seg = pos, seg
+    def __init__(self, pos, seg, ts=None):
+        self.pos, self.seg, self.ts = pos, seg, ts
         self.fresh = self.cread = self.c5m = self.c1h = self.out = 0
         self.tools, self.text_chars = [], 0
 
@@ -99,6 +100,9 @@ class Thread:
         self.notes = []  # (pos, text) of user prompts: what the agent knew before calling tools
         self.cost_usd = None
         self.start = None  # ISO timestamp of the first event
+        self.instructions = {}  # CLAUDE.md & co. as actually loaded: path -> chars (recent Claude Code logs them)
+        self.attachments = False  # transcript format that records attachments, so an empty dict means "none loaded"
+        self.start_ctx = None  # context size of the session's first call, kept when --since trims earlier calls
         self.mtime = os.path.getmtime(path)
 
 
@@ -156,6 +160,13 @@ def parse_claude(path):
             seg += 1
         elif typ == "cost-state":
             main.cost_usd = d.get("totalCostUSD", main.cost_usd)
+        elif typ == "attachment":
+            t.attachments = True
+            a = d.get("attachment") or {}
+            if isinstance(a, dict) and a.get("type") == "instructions":
+                for f in a.get("files") or []:
+                    if isinstance(f, dict) and f.get("path"):
+                        t.instructions[str(f["path"])] = len(str(f.get("content") or ""))
         elif typ == "assistant":
             m = d.get("message") or {}
             u = m.get("usage") or {}
@@ -165,7 +176,7 @@ def parse_claude(path):
                 if not any(u.get(k) for k in ("input_tokens", "output_tokens", "cache_read_input_tokens",
                                               "cache_creation_input_tokens")):
                     continue  # synthetic / errored message: no API call billed
-                call = calls[mid] = Call(pos, seg)
+                call = calls[mid] = Call(pos, seg, epoch(d.get("timestamp")))
                 t.calls.append(call)
             cc = u.get("cache_creation") or {}
             c5m, c1h = cc.get("ephemeral_5m_input_tokens") or 0, cc.get("ephemeral_1h_input_tokens") or 0
@@ -225,18 +236,24 @@ def parse_codex(path):
         if typ == "session_meta":
             t.cwd = t.cwd or p.get("cwd")
             t.session = t.session or p.get("id") or p.get("session_id")
+            src = p.get("source")
+            if isinstance(src, dict) and "subagent" in src:  # guardian / spawned threads belong to a parent
+                t.subagent = True
+                parent = re.search(r'"parent_thread_id":\s*"([^"]+)"', json.dumps(src))
+                if parent:
+                    t.session = parent.group(1)
         elif typ == "turn_context":
             t.cwd = t.cwd or p.get("cwd")
         elif typ == "compacted":
             seg += 1
         elif typ == "token_usage_record" and isinstance(p.get("usage"), dict):
-            records.append((pos, seg, p["usage"]))
+            records.append((pos, seg, p["usage"], d.get("timestamp")))
         elif typ == "event_msg" and p.get("type") == "token_count" and isinstance(p.get("info"), dict):
             info = p["info"]
             total = json.dumps(info.get("total_token_usage"), sort_keys=True)
             if total != last_total and isinstance(info.get("last_token_usage"), dict):
                 last_total = total
-                counts.append((pos, seg, info["last_token_usage"]))
+                counts.append((pos, seg, info["last_token_usage"], d.get("timestamp")))
         elif typ == "event_msg" and p.get("type") == "user_message":
             t.human_pos.append(pos)
             t.notes.append((pos, str(p.get("message") or "")[:MAX_KEEP_CHARS]))
@@ -265,8 +282,8 @@ def parse_codex(path):
             elif pt == "message" and p.get("role") == "assistant":
                 t.uses.append(ToolUse(None, "__text__", sum(len(c.get("text") or "") for c in p.get("content") or []
                                                             if isinstance(c, dict)), pos))
-    for pos, s, u in records or counts:  # newer rollouts log both; prefer the per-response records
-        call = Call(pos, s)
+    for pos, s, u, ts in records or counts:  # newer rollouts log both; prefer the per-response records
+        call = Call(pos, s, epoch(ts))
         cached = u.get("cached_input_tokens") or 0
         call.cread = cached
         call.fresh = max(0, (u.get("input_tokens") or 0) - cached)
@@ -329,16 +346,20 @@ def _main_segment(cmd):
     return []
 
 
+def _num(v):
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
 def classify(tu):
     """-> (category, target, range) where category in read/search/shell/fetch/edit/subagent/other."""
     n, inp = tu.name.lower(), tu.input if isinstance(tu.input, dict) else {}
     if n in ("read", "read_file", "view_file"):
         path = inp.get("file_path") or inp.get("path") or inp.get("target_file") or ""
-        return "read", path, (inp.get("offset") or inp.get("start_line"), inp.get("limit") or inp.get("end_line"))
+        return "read", str(path), (_num(inp.get("offset") or inp.get("start_line")), _num(inp.get("limit") or inp.get("end_line")))
     if n in ("grep", "glob", "ls", "search", "codebase_search", "grep_search", "file_search", "list_dir"):
         return "search", str(inp.get("pattern") or inp.get("query") or inp.get("path") or ""), None
     if n in EDIT_TOOLS:
-        return "edit", inp.get("file_path") or inp.get("path") or shell_command(tu.input), None
+        return "edit", str(inp.get("file_path") or inp.get("path") or shell_command(tu.input)), None
     if n in ("webfetch", "websearch", "web_search", "fetch", "web_fetch") or "mcp" in n:
         return "fetch", str(inp.get("url") or inp.get("query") or tu.name), None
     if n in ("task", "agent", "spawn_agent"):
@@ -414,10 +435,11 @@ def analyze(t):
 
     findings = []
 
-    def add(kind, tu, label, tokens, avoidable, pos, seg, enter_w=None, cost=None):
+    def add(kind, tu, label, tokens, avoidable, pos, seg, out_w=0.0, cost=None):
         n = later(pos, seg)
         if cost is None:
-            cost = avoidable * ((enter_w if enter_w is not None else w["enter"]) + n * w["read"])
+            # generated tokens are paid once (out_w); then the next call writes them to the cache, later ones read
+            cost = avoidable * (out_w + ((w["enter"] + (n - 1) * w["read"]) if n else 0))
         if cost > 0:
             findings.append(Finding(kind, t, tu.name if tu else "reply", label, tokens, avoidable, n, cost, pos))
 
@@ -435,7 +457,7 @@ def analyze(t):
                 changed = sum(len(line) for h in r.extra.get("structuredPatch") or [] if isinstance(h, dict)
                               for line in h.get("lines") or [] if line[:1] in "+-") / CHARS_PER_TOKEN
                 if toks > KINDS["rewrite"][0] and changed < 0.5 * toks:
-                    add("rewrite", tu, target, toks, toks - changed, tu.pos, r.seg, enter_w=w["out"])
+                    add("rewrite", tu, target, toks, toks - changed, tu.pos, r.seg, out_w=w["out"])
             continue
         if cat == "shell":
             if MUTATES_ALL.search(target):
@@ -465,8 +487,9 @@ def analyze(t):
             # identical call AND identical answer: pure repeat (stateful tools legitimately differ)
             sig = (tu.name, json.dumps(tu.input, sort_keys=True, default=str))
             prev = seen_calls.get(sig)
-            digest = hash(_body(r.text))
-            if prev == (r.seg, digest) and r.tokens >= 50:
+            body = _body(r.text)
+            digest = hash(body)
+            if body and prev == (r.seg, digest) and r.tokens >= 50:  # image-only results can't be compared
                 add("wasted-call", tu, target, r.tokens, r.tokens, r.pos, r.seg)
                 continue
             seen_calls[sig] = (r.seg, digest)
@@ -506,7 +529,7 @@ def analyze(t):
     for c in t.calls:
         toks = c.text_chars / CHARS_PER_TOKEN
         if toks > flag:
-            add("verbose-reply", None, "", toks, toks - budget, c.pos, c.seg, enter_w=w["out"])
+            add("verbose-reply", None, "", toks, toks - budget, c.pos, c.seg, out_w=w["out"])
 
     return findings, sum(call_cost(t, c, w) for c in t.calls)
 
@@ -576,7 +599,13 @@ def parse_since(s):
     m = re.fullmatch(r"(\d+)([hdw])", s)
     if m:
         return time.time() - int(m.group(1)) * {"h": 3600, "d": 86400, "w": 604800}[m.group(2)]
-    return datetime.fromisoformat(s).timestamp()  # naive dates = local time
+    ts = epoch(s) if re.search(r"[T ]\d|Z$|[+-]\d\d:?\d\d$", s) else None
+    if ts is None:
+        try:
+            ts = datetime.fromisoformat(s).timestamp()  # plain dates = local midnight
+        except ValueError:
+            raise ValueError(f"can't read {s!r}: use 24h, 7d, 4w, 2026-10-01, 2026-10-01T09:00 or all") from None
+    return ts
 
 
 # ---------------------------------------------------------------- report
@@ -672,6 +701,15 @@ def collect(args):
             print(f"tokenleak: skipping {f}: {e}", file=sys.stderr)
     for t in parsed:
         f = t.path
+        if t.calls:
+            t.start_ctx = t.calls[0].ctx_in
+        if since and t.calls:  # files are picked by mtime; only count the calls inside the window
+            keep = [c for c in t.calls if c.ts is None or c.ts >= since]
+            if len(keep) < len(t.calls):
+                first = keep[0].pos if keep else float("inf")
+                t.calls = keep
+                t.uses = [u for u in t.uses if u.pos >= first]
+                t.results = [r for r in t.results if r.pos >= first]
         if not t.calls:
             continue
         if args.here or args.current:
@@ -697,22 +735,34 @@ def run(args):
 def summarize(threads):
     """-> (totals, by_kind, findings sorted by cost) for a set of threads."""
     findings, units, sess, loaded, firsts, base_cost = [], 0.0, {}, {}, [], 0.0
-    projects = {}
+    projects, per_thread = {}, []
     for t in threads:
-        fs, u = analyze(t)
-        pj = projects.setdefault(t.cwd or "?", {"units": 0.0, "leak": 0.0, "sessions": set(), "usd": 0.0})
+        try:
+            fs, u = analyze(t)
+        except Exception as e:  # one odd transcript must not sink the whole report
+            print(f"tokenleak: skipped {t.path}: {type(e).__name__}: {e}", file=sys.stderr)
+            continue
+        key = (t.agent, t.session or t.path)
+        per_thread.append((t.cwd or "?", key, u, sum(f.cost for f in fs)))
+        pj = projects.setdefault(t.cwd or "?", {"units": 0.0, "leak": 0.0, "sessions": set()})
         pj["units"] += u
         pj["leak"] += sum(f.cost for f in fs)
-        pj["sessions"].add((t.agent, t.session or t.path))
+        pj["sessions"].add(key)
         if not t.subagent:
             w = weights(t)
             n, nseg = len(t.calls), len({c.seg for c in t.calls})
             first = t.calls[0]
-            firsts.append(first.ctx_in)
-            # what the first call really paid for its input, then a cache read of it on every later call
-            base_cost += call_cost(t, first, w) - w["out"] * first.out + first.ctx_in * w["read"] * (n - 1)
-            for f, toks in always_loaded(t.agent, t.cwd):
-                e = loaded.setdefault(f, {"tokens": toks, "cost": 0.0, "sessions": 0})
+            start = t.start_ctx if t.start_ctx is not None else first.ctx_in
+            firsts.append(start)
+            if start == first.ctx_in:  # what the first call really paid for its input, then a cache read per call
+                base_cost += call_cost(t, first, w) - w["out"] * first.out + start * w["read"] * (n - 1)
+            else:  # session started before the window: every counted call re-read the start context
+                base_cost += start * w["read"] * n
+            files = ([(f, n / CHARS_PER_TOKEN, True) for f, n in t.instructions.items()]
+                     if t.agent == "claude" and t.attachments
+                     else [(f, toks, False) for f, toks in always_loaded(t.agent, t.cwd)])
+            for f, toks, exact in files:
+                e = loaded.setdefault(f, {"tokens": toks, "cost": 0.0, "sessions": 0, "exact": exact})
                 e["cost"] += toks * (nseg * w["enter"] + (n - nseg) * w["read"])
                 e["sessions"] += 1
         findings += fs
@@ -730,9 +780,13 @@ def summarize(threads):
     leak = sum(f.cost for f in findings)
     pct = 100 * leak / units if units else 0.0
     by_project = []
-    for cwd, pj in projects.items():  # avoidable spend per project, from each session's own cost
-        usd = sum(sess[k]["usd"] * sess[k]["leak"] / sess[k]["units"] for k in pj["sessions"]
-                  if sess[k]["usd"] and sess[k]["units"])
+    usd_by_cwd = {}  # a session's $ split over its threads, so a subagent in a subfolder isn't counted twice
+    for cwd, key, u, lk in per_thread:
+        sk = sess.get(key)
+        if sk and sk["usd"] and sk["units"]:
+            usd_by_cwd[cwd] = usd_by_cwd.get(cwd, 0.0) + sk["usd"] * lk / sk["units"]
+    for cwd, pj in projects.items():
+        usd = usd_by_cwd.get(cwd, 0.0)
         by_project.append({"cwd": cwd, "sessions": len(pj["sessions"]), "cost_units": pj["units"],
                            "leak_pct": 100 * pj["leak"] / pj["units"] if pj["units"] else 0, "usd_leak": usd or None,
                            "leak_units": pj["leak"]})
@@ -815,14 +869,18 @@ def print_report(totals, by_kind, findings, since, args, out=None):
         share = 100 * k["cost"] / totals["cost_units"] if totals["cost_units"] else 0
         avoid = fmt(k["avoidable_tokens"]) if k["avoidable_tokens"] else "-"
         w(f"  {kind:<14}{k['count']:>7}{avoid:>12}{share:>8.1f}%   {st('2', KINDS[kind][2])}\n")
-    if len(totals["projects"]) > 1 and not args.redact:
+    tmp = tuple(os.path.realpath(d) + os.sep for d in {tempfile.gettempdir(), "/tmp", "/var/folders"} if os.path.isdir(d))
+    repeat = [pj for pj in totals["projects"] if pj["sessions"] >= 2  # one-off and scratch folders are noise here
+              and not os.path.realpath(pj["cwd"]).startswith(tmp)]
+    if len(repeat) >= 2 and not args.redact:
         w(f"\n  {st('1', 'by project')}\n")
         home = os.path.expanduser("~")
-        for pj in totals["projects"][:6]:
+        for pj in repeat[:6]:
             name = pj["cwd"].replace(home, "~")
             name = name if len(name) <= 44 else "…" + name[-43:]
             usd = f"≈ ${pj['usd_leak']:,.2f} avoidable" if pj["usd_leak"] else ""
-            w(f"  {pj['leak_pct']:>6.1f}%  {name:<44} {st('2', str(pj['sessions']) + (' session' if pj['sessions'] == 1 else ' sessions')):>14}  {st('2', usd)}\n")
+            n = f"{pj['sessions']} sessions"
+            w(f"  {pj['leak_pct']:>6.1f}%  {name:<44} {st('2', f'{n:>12}')}  {st('2', usd)}\n")
     if totals["always_loaded"] or totals["avg_first_call_context"]:
         note = (fmt(totals["avg_first_call_context"]) + " tok at session start (system prompt, tools, MCP"
                 + (", files below" if totals["always_loaded"] else "") + "), re-sent every call")
@@ -833,7 +891,8 @@ def print_report(totals, by_kind, findings, since, args, out=None):
             path = e["path"] if not args.redact else os.path.basename(e["path"])
             path = path.replace(home, "~")
             path = path if len(path) <= 60 else "…" + path[-59:]
-            w(f"  {share:>7}  {path:<60} {st('2', fmt(e['tokens']) + ' tok (current size)')}\n")
+            size = fmt(e["tokens"]) + " tok (" + ("as loaded" if e.get("exact") else "current size") + ")"
+            w(f"  {share:>7}  {path:<60} {st('2', size)}\n")
     w(f"\n  {st('1', 'top leaks')}\n")
     width = 46
     for i, f in enumerate(findings[: args.top], 1):
@@ -852,8 +911,15 @@ def print_report(totals, by_kind, findings, since, args, out=None):
 
 
 def epoch(iso):
+    """ISO-8601 (with Z or nanoseconds, any Python 3.8+) or epoch seconds/ms -> epoch seconds, else None."""
+    if iso is None:
+        return None
+    if isinstance(iso, (int, float)) and not isinstance(iso, bool):
+        return iso / 1000 if iso > 1e11 else float(iso)
+    text = re.sub(r"(\.\d{6})\d+", r"\1", str(iso).strip().replace("Z", "+00:00"))
+    text = re.sub(r"\.(\d{1,5})(?=[+-]|$)", lambda m: "." + m.group(1).ljust(6, "0"), text)
     try:
-        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).timestamp()
+        return datetime.fromisoformat(text).timestamp()
     except ValueError:
         return None
 
@@ -865,9 +931,9 @@ def compare(args):
     # a subagent belongs to its parent session's period
     starts = {}
     for t in threads:
-        ts = epoch(t.start) if t.start else t.mtime
+        ts = epoch(t.start) or t.mtime
         key = (t.agent, t.session or t.path)
-        starts[key] = min(starts.get(key, ts), ts if ts is not None else t.mtime)
+        starts[key] = min(starts.get(key, ts), ts)
     before = [t for t in threads if starts[(t.agent, t.session or t.path)] < split]
     after = [t for t in threads if starts[(t.agent, t.session or t.path)] >= split]
     return summarize(before), summarize(after), since, split
@@ -986,10 +1052,15 @@ def print_share(totals, by_kind, out=None):
     out.write("╰" + "─" * width + "╯\n")
 
 
+def redacted(totals, args):
+    if not args.redact:
+        return totals
+    return dict(totals, always_loaded=[dict(e, path=os.path.basename(e["path"])) for e in totals["always_loaded"]],
+                projects=[dict(p, cwd=None) for p in totals["projects"]])
+
+
 def to_json(totals, by_kind, findings, args):
-    if args.redact:
-        totals = dict(totals, always_loaded=[dict(e, path=os.path.basename(e["path"])) for e in totals["always_loaded"]],
-                      projects=[dict(p, cwd=None) for p in totals["projects"]])
+    totals = redacted(totals, args)
     return {
         "version": __version__,
         "totals": totals,
@@ -1166,6 +1237,45 @@ def suggest(threads, out=None, since=0.0):
     out.write("\n".join(lines) + "\n")
 
 
+GUARD_SKIP = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".ico", ".svg", ".pdf", ".ipynb")
+
+
+def guard(stdin, out=None):
+    """Claude Code PreToolUse hook on Read: stop whole-file reads of big text files.
+
+    The model gets the file size and how to read only what it needs; passing `limit` (or `offset`) always goes
+    through, so a whole read stays possible. Disable with TOKENLEAK_GUARD=0, tune with TOKENLEAK_GUARD_BYTES.
+    """
+    out = out or sys.stdout
+    if os.environ.get("TOKENLEAK_GUARD", "1") == "0":
+        return
+    try:
+        event = json.loads(stdin.read() or "{}")
+    except ValueError:
+        return
+    inp = event.get("tool_input") or {}
+    path = str(inp.get("file_path") or "")
+    if event.get("tool_name") != "Read" or inp.get("limit") or inp.get("offset") or not path \
+            or path.lower().endswith(GUARD_SKIP):
+        return
+    try:
+        size = os.path.getsize(path)
+        if size <= int(os.environ.get("TOKENLEAK_GUARD_BYTES", "24000")):
+            return
+        with open(path, "rb") as fh:
+            head = fh.read(4096)
+            if b"\0" in head:  # binary: let the Read tool decide
+                return
+            lines = head.count(b"\n") + sum(chunk.count(b"\n") for chunk in iter(lambda: fh.read(1 << 16), b""))
+    except (OSError, ValueError):
+        return
+    reason = (f"tokenleak: {os.path.basename(path)} is {lines} lines (~{fmt(size / CHARS_PER_TOKEN)} tokens) and every "
+              f"later call would re-send it. Find what you need first (grep -n or Grep), then Read with offset and limit. "
+              f"If you really need the whole file, call Read again with limit: {lines + 1}.")
+    json.dump({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
+                                      "permissionDecisionReason": reason}}, out)
+
+
 def print_rules(out=None):
     out = out or sys.stdout
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
@@ -1176,7 +1286,8 @@ def print_rules(out=None):
         out.write(f"The rules ship with the skill: {REPO}/blob/main/skills/tokenleak/SKILL.md\n")
         return
     parts = text.split("\n---\n", 1)
-    out.write(parts[1].lstrip() if text.startswith("---") and len(parts) == 2 else text)
+    body = parts[1].lstrip() if text.startswith("---") and len(parts) == 2 else text
+    out.write(body.split("\n## Audit", 1)[0].rstrip() + "\n")
 
 
 def main(argv=None):
@@ -1184,7 +1295,8 @@ def main(argv=None):
         prog="tokenleak",
         description="Find where your coding agent leaks context tokens (Claude Code + Codex transcripts). "
                     "Local and read-only.",
-        epilog="`tokenleak rules` prints the rules to paste into AGENTS.md / CLAUDE.md / .cursorrules. "
+        epilog="`tokenleak rules` prints the rules to paste into AGENTS.md / CLAUDE.md / .cursorrules (from the skill's "
+               "SKILL.md; a CLI-only install prints where to find them). "
                "`tokenleak suggest` turns this project's leaks into rules for its CLAUDE.md / AGENTS.md. "
                "`tokenleak statusline` is a Claude Code status line (reads its JSON on stdin).")
     ap.add_argument("paths", nargs="*", help="transcript files or folders (default: ~/.claude/projects, ~/.codex/sessions)")
@@ -1202,7 +1314,19 @@ def main(argv=None):
     ap.add_argument("--redact", action="store_true", help="hide commands, paths and project names")
     ap.add_argument("--no-color", action="store_true")
     ap.add_argument("--version", action="version", version=f"tokenleak {__version__}")
+    for stream in (sys.stdout, sys.stderr):  # Windows pipes default to cp1252, which has no "≈" or box drawing
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     argv = sys.argv[1:] if argv is None else argv
+    try:
+        return _main(ap, argv)
+    except ValueError as e:  # bad --since / --compare values
+        ap.error(str(e))
+
+
+def _main(ap, argv):
     if argv[:1] == ["rules"]:
         print_rules()
         return 0
@@ -1213,6 +1337,9 @@ def main(argv=None):
         args.since = args.since or "30d"
         threads, since = collect(args)
         suggest(threads, since=since)
+        return 0
+    if argv[:1] == ["guard"]:  # Claude Code PreToolUse hook (see guard())
+        guard(sys.stdin)
         return 0
     if argv[:1] == ["statusline"]:
         statusline(sys.stdin)
@@ -1227,9 +1354,11 @@ def main(argv=None):
         argv = argv[1:]
     args = ap.parse_args(argv)
     if args.compare:
+        if args.html or args.share:
+            ap.error("--compare prints a text table or --json; --html and --share don't apply")
         a, b, since, split = compare(args)
         if args.json:
-            json.dump({"version": __version__, "split": split, "before": a[0], "after": b[0],
+            json.dump({"version": __version__, "split": split, "before": redacted(a[0], args), "after": redacted(b[0], args),
                        "before_by_kind": a[1], "after_by_kind": b[1]}, sys.stdout, indent=2, default=str)
             sys.stdout.write("\n")
         else:

@@ -1,0 +1,23 @@
+{
+  "task": "add-feature",
+  "variant": "tokenleak",
+  "run": 2,
+  "wall_s": 65.3,
+  "pass": true,
+  "cost_usd": 0.26344150000000005,
+  "num_turns": 26,
+  "session_id": "b8c8b0f9-b626-464e-a5f4-de3f15294fad",
+  "answer": "Done! I've added the `--category NAME` option to `tools/report.py`. The implementation:\n\n1. Uses `argparse` to parse the `--category` option\n2. Filters orders to only include those whose product's category matches the specified name\n3. Maintains the same output format with the summary line at the end\n4. Also fixed a bug in the original code where it called a non-existent `ship_cost_for` function (now correctly uses `ship_cost`)\n\nThe command works exactly as specified:\n```bash\npython3 -m tools.re",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 25,
+  "context_tokens": 1570955,
+  "output_tokens": 5646,
+  "max_context": 74080,
+  "leak_pct": 23.98,
+  "leaks": {
+    "big-read": 1,
+    "wasted-call": 1,
+    "serial-call": 3
+  },
+  "escaped": false
+}

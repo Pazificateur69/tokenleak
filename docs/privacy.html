@@ -18,7 +18,7 @@
   <p>tokenleak collects nothing. It has no telemetry, no analytics and makes no network requests.</p>
   <ul>
     <li>The rules are text added to your agent's context by a local hook. They stay between you and the AI provider you already use.</li>
-    <li>The audit (<code>tokenleak.py</code>) reads transcript files your agent already wrote on your machine (<code>~/.claude/projects</code>, <code>~/.codex/sessions</code>) and your instruction files (<code>CLAUDE.md</code>, <code>AGENTS.md</code>) to measure their size. It prints a report and writes nothing.</li>
+    <li>The audit (<code>tokenleak.py</code>) reads transcript files your agent already wrote on your machine (<code>~/.claude/projects</code>, <code>~/.codex/sessions</code>) and your instruction files (<code>CLAUDE.md</code>, <code>AGENTS.md</code>) to measure their size. It prints a report and writes nothing, unless you ask for an HTML report with <code>--html FILE</code>.</li>
     <li>No credentials, API keys or account data are read.</li>
   </ul>
 

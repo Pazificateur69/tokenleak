@@ -9,4 +9,5 @@
 | add-feature | baseline | 5/5 | $0.459 | 945.9k | 3.2k | 10 | 20.6% |
 | add-feature | tokenleak | 5/5 | $0.184 | 453.0k | 2.7k | 9 | 0.0% |
 
-**Sum of medians** — cost: $1.072 → $0.643 (-40%), context tokens: 2.3M → 1.6M (-28%), output tokens: 7.8k → 6.5k (-17%). Passed: baseline 20/20, tokenleak 20/20. Model: claude-sonnet-5. Runs that tried to leave the repo: 1.
+**Sum of medians, tokenleak vs baseline**: cost $1.072 → $0.643 (-40%), context tokens 2.3M → 1.6M (-28%), output tokens 7.8k → 6.5k (-17%).
+Passed: baseline 20/20, tokenleak 20/20. Model: claude-sonnet-5. Runs that tried to leave the repo: 1.

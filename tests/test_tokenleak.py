@@ -1,4 +1,5 @@
 """Run: python3 -m unittest discover -s tests"""
+import contextlib
 import io
 import json
 import os
@@ -120,7 +121,7 @@ class TokenleakTest(unittest.TestCase):
         _, fs, _ = self.kinds(self.claude)
         kinds = sorted(f.kind for f in fs)
         self.assertEqual(kinds.count("re-read"), 1, kinds)          # t4 only: t6 changed, t7 after compaction
-        self.assertEqual(kinds.count("big-read"), 3, kinds)         # t1, t6, t7
+        self.assertEqual(kinds.count("big-read"), 2, kinds)         # t1, t7; t6 is never re-sent (compaction follows)
         self.assertEqual(kinds.count("serial-call"), 1, kinds)      # t2: utils.py known from the prompt
         self.assertEqual(kinds.count("noisy-shell"), 1, kinds)
         self.assertEqual(kinds.count("verbose-reply"), 1, kinds)
@@ -131,7 +132,8 @@ class TokenleakTest(unittest.TestCase):
         first = next(f for f in fs if f.kind == "big-read")
         self.assertEqual(first.later, 5)                            # m2..m6, then compaction
         self.assertAlmostEqual(first.avoidable, len(APP) / 4 - 2000)
-        self.assertAlmostEqual(first.cost, first.avoidable * (1.25 + 5 * 0.1))
+        # the first later call writes it to the cache (1.25x), the 4 after it read it (0.1x each)
+        self.assertAlmostEqual(first.cost, first.avoidable * (1.25 + 4 * 0.1))
         serial = next(f for f in fs if f.kind == "serial-call")
         self.assertAlmostEqual(serial.cost, 25000 * 0.1)
 
@@ -251,12 +253,115 @@ class TokenleakTest(unittest.TestCase):
         self.assertIn("big-read", page)
         self.assertNotIn("/proj", page)  # --redact hides paths in the report too
 
+    def test_malformed_tool_inputs_do_not_crash(self):
+        lines = [{"type": "user", "sessionId": "m1", "cwd": "/p", "message": {"role": "user", "content": "go"}}]
+        lines += assistant("a1", u(c5m=9000), tool_use("x1", "Read", {"file_path": "/p/a.py", "offset": [1, 2], "limit": "x"}))
+        lines.append(result("x1", APP))
+        lines += assistant("a2", u(cread=12000), tool_use("x2", "Edit", {"file_path": ["/p/a.py"]}))
+        lines.append(result("x2", "ok"))
+        lines += assistant("a3", u(cread=13000), tool_use("x3", "Read", {"file_path": "/p/a.py", "offset": [3]}))
+        lines.append(result("x3", APP))
+        path = os.path.join(self.dir, "bad.jsonl")
+        write_jsonl(path, lines)
+        totals, _, _ = T.summarize([t for t in T.parse(path) if t.calls])
+        self.assertEqual(totals["api_calls"], 3)
+
+    def test_codex_subagent_rollout_joins_its_parent(self):
+        lines = [{"type": "session_meta", "payload": {"id": "child", "cwd": "/p",
+                  "source": {"subagent": {"thread_spawn": {"parent_thread_id": "parent-1"}}}}},
+                 {"type": "token_usage_record", "payload": {"usage": {"input_tokens": 100, "output_tokens": 5}}}]
+        path = os.path.join(self.dir, "rollout-child.jsonl")
+        write_jsonl(path, lines)
+        (t,) = T.parse(path)
+        self.assertTrue(t.subagent)
+        self.assertEqual(t.session, "parent-1")
+
+    def test_since_counts_only_calls_inside_the_window(self):
+        lines = claude_session()
+        stamps = iter(["2026-01-01T10:00:00.000Z"] * 8 + ["2026-03-01T10:00:00.000Z"] * 100)
+        for d in lines:
+            if d["type"] == "assistant":
+                d["timestamp"] = next(stamps)
+        # make the 4 last responses recent
+        recent = [d for d in lines if d["type"] == "assistant"][-4:]
+        for d in recent:
+            d["timestamp"] = "2026-03-01T10:00:00.000Z"
+        path = os.path.join(self.dir, "win", "s.jsonl")
+        os.makedirs(os.path.dirname(path))
+        write_jsonl(path, lines)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([os.path.dirname(path), "--since", "2026-02-01", "--json"])
+        self.assertEqual(json.loads(buf.getvalue())["totals"]["api_calls"], 4)
+
+    def test_compare_respects_redact_and_rejects_html(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([self.dir, "--since", "all", "--compare", "2026-01-15", "--json", "--redact"])
+        self.assertNotIn("/proj", buf.getvalue())
+        with self.assertRaises(SystemExit), redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            T.main([self.dir, "--since", "all", "--compare", "2026-01-15", "--html", os.path.join(self.dir, "x.html")])
+
+    def test_instruction_files_as_actually_loaded(self):
+        lines = claude_session()
+        lines.insert(1, {"type": "attachment", "sessionId": "s1", "cwd": "/proj", "attachment": {
+            "type": "instructions", "files": [{"path": "/proj/CLAUDE.md", "type": "Project", "content": "r" * 4000}]}})
+        path = os.path.join(self.dir, "att.jsonl")
+        write_jsonl(path, lines)
+        totals, _, _ = T.summarize([t for t in T.parse(path) if t.calls])
+        loaded = {e["path"]: e for e in totals["always_loaded"]}
+        self.assertEqual(list(loaded), ["/proj/CLAUDE.md"])
+        self.assertTrue(loaded["/proj/CLAUDE.md"]["exact"])
+        self.assertAlmostEqual(loaded["/proj/CLAUDE.md"]["tokens"], 1000)
+
+    def test_image_only_repeats_are_not_wasted_calls(self):
+        lines = [{"type": "user", "sessionId": "i1", "cwd": "/p", "message": {"role": "user", "content": "look"}}]
+        for k in range(3):
+            lines += assistant(f"s{k}", u(cread=10000 + k), tool_use(f"s{k}", "mcp__browser__screenshot", {}))
+            lines.append(result(f"s{k}", [{"type": "image", "source": {"type": "base64", "data": "AAAA"}}]))
+        path = os.path.join(self.dir, "img.jsonl")
+        write_jsonl(path, lines)
+        _, by_kind, _ = T.summarize([t for t in T.parse(path) if t.calls])
+        self.assertNotIn("wasted-call", by_kind)
+
+    def test_dates(self):
+        self.assertAlmostEqual(T.epoch("2026-10-12T08:00:00.123456789Z"), T.epoch("2026-10-12T08:00:00.123456+00:00"))
+        self.assertAlmostEqual(T.epoch(1791187125000), 1791187125.0)
+        self.assertIsNone(T.epoch("yesterday"))
+        with self.assertRaises(ValueError):
+            T.parse_since("30m")
+        self.assertGreater(T.parse_since("2026-10-01T00:00:00Z"), 0)
+
+    def test_guard(self):
+        big = os.path.join(self.dir, "big.py")
+        with open(big, "w") as f:
+            f.write("x = 1  # filler\n" * 3000)
+
+        def run(event, env=None):
+            old = dict(os.environ)
+            os.environ.update(env or {})
+            try:
+                buf = io.StringIO()
+                T.guard(io.StringIO(json.dumps(event)), buf)
+                return buf.getvalue()
+            finally:
+                os.environ.clear()
+                os.environ.update(old)
+
+        denied = json.loads(run({"tool_name": "Read", "tool_input": {"file_path": big}}))
+        self.assertEqual(denied["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertIn("3000 lines", denied["hookSpecificOutput"]["permissionDecisionReason"])
+        self.assertEqual(run({"tool_name": "Read", "tool_input": {"file_path": big, "limit": 3001}}), "")
+        self.assertEqual(run({"tool_name": "Bash", "tool_input": {"command": "cat " + big}}), "")
+        self.assertEqual(run({"tool_name": "Read", "tool_input": {"file_path": big}}, {"TOKENLEAK_GUARD": "0"}), "")
+
     def test_rules_print_skill_body(self):
         buf = io.StringIO()
         with redirect_stdout(buf):
             T.main(["rules"])
         self.assertTrue(buf.getvalue().startswith("# tokenleak"))
         self.assertNotIn("description:", buf.getvalue())
+        self.assertNotIn("## Audit", buf.getvalue())  # only needed with the script at hand
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "tokenleak",
   "description": "Find and plug your coding agent's token leaks.",
   "owner": {

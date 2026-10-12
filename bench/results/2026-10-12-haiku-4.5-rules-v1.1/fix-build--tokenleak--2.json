@@ -1,0 +1,21 @@
+{
+  "task": "fix-build",
+  "variant": "tokenleak",
+  "run": 2,
+  "wall_s": 25.8,
+  "pass": true,
+  "cost_usd": 0.0843814,
+  "num_turns": 9,
+  "session_id": "0f871abf-4528-404e-9016-be15c63c0dbf",
+  "answer": "Fixed. The build was failing because `tools/report.py` was calling the non-existent function `shipping.ship_cost_for()`. The actual function in `shopcart/shipping.py` is named `ship_cost()`. I corrected the function call and the build now passes.",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 9,
+  "context_tokens": 423259,
+  "output_tokens": 1508,
+  "max_context": 51193,
+  "leak_pct": 5.27,
+  "leaks": {
+    "noisy-shell": 1
+  },
+  "escaped": false
+}

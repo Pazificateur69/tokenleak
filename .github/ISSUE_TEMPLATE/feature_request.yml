@@ -1,0 +1,15 @@
+name: Feature or new agent
+description: A new leak detector, a new agent's transcript format, or anything else
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like tokenleak to do?
+    validations:
+      required: true
+  - type: textarea
+    id: format
+    attributes:
+      label: For a new agent, where does it store its sessions?
+      description: Path and a couple of redacted lines of the format help a lot. Never paste real prompts or code.

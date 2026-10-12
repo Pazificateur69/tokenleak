@@ -81,7 +81,7 @@
   <section class="proof" aria-label="Benchmark results in brief">
     <div class="wrap proof-row">
       <div class="stat reveal"><strong data-count="-40" data-suffix="%">&minus;40%</strong><span>cost on a 40-run A/B benchmark in Claude Code</span></div>
-      <div class="stat reveal"><strong data-count="20" data-suffix="/20">20/20</strong><span>tasks passed, with and without the rules</span></div>
+      <div class="stat reveal"><strong data-count="20" data-suffix="/20">20/20</strong><span>runs passed, with and without the rules</span></div>
       <div class="stat reveal"><strong data-count="-60" data-suffix="%">&minus;60%</strong><span>on the task held out from tuning the rules</span></div>
     </div>
   </section>
@@ -120,12 +120,12 @@
           <li>One Python file, standard library only.</li>
           <li>Shows what your <code>CLAUDE.md</code> costs on every call.</li>
           <li><code>tokenleak suggest</code> turns a project's leaks into rules for its <code>CLAUDE.md</code>.</li>
-          <li><code>--html</code> writes a shareable report; <code>--redact</code> hides paths first.</li>
+          <li><code>--html</code> writes a shareable report; <code>--redact</code> hides commands, paths and project names.</li>
         </ul>
       </div>
       <figure class="term reveal" id="term">
         <div class="term-bar"><i></i><i></i><i></i><span>~/my-project</span></div>
-        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py --since 30d">python3 tokenleak.py --since 30d</span><span class="caret" aria-hidden="true"></span></span><span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.0.0  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span><span class="ln" style="--i:1"> </span><span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output</span><span class="ln" style="--i:3"> </span><span class="ln" style="--i:4">  <span class="b">LEAK SCORE</span>  <span class="b y">16.4%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span><span class="ln" style="--i:5"> </span><span class="ln" style="--i:6"><span class="d">  leak            count   avoidable  of cost   fix</span></span><span class="ln" style="--i:7">  big-read           17      153.2k    14.3%   <span class="d">Locate, then read: grep -n first, then read o</span></span><span class="ln" style="--i:8">  wide-search         4       11.4k     1.0%   <span class="d">Narrow searches: scope path/type, cap results</span></span><span class="ln" style="--i:9">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span><span class="ln" style="--i:10">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span><span class="ln" style="--i:11"> </span><span class="ln" style="--i:12">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span><span class="ln" style="--i:13"> </span><span class="ln" style="--i:14">  <span class="b">top leaks</span></span><span class="ln" style="--i:15">   1    1.1%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span></span><span class="ln" style="--i:16">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span></span><span class="ln" style="--i:17">   3    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span></span><span class="ln" style="--i:18">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span></span><span class="ln" style="--i:19">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span></span></pre>
+        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py --since 30d">python3 tokenleak.py --since 30d</span><span class="caret" aria-hidden="true"></span></span><span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.4.0  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span><span class="ln" style="--i:1"> </span><span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output</span><span class="ln" style="--i:3"> </span><span class="ln" style="--i:4">  <span class="b">LEAK SCORE</span>  <span class="b y">15.8%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span><span class="ln" style="--i:5"> </span><span class="ln" style="--i:6"><span class="d">  leak            count   avoidable  of cost   fix</span></span><span class="ln" style="--i:7">  big-read           17      153.2k    13.7%   <span class="d">Locate, then read: grep -n first, then read o</span></span><span class="ln" style="--i:8">  wide-search         4       11.4k     0.9%   <span class="d">Narrow searches: scope path/type, cap results</span></span><span class="ln" style="--i:9">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span><span class="ln" style="--i:10">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span><span class="ln" style="--i:11"> </span><span class="ln" style="--i:12">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span><span class="ln" style="--i:13"> </span><span class="ln" style="--i:14">  <span class="b">top leaks</span></span><span class="ln" style="--i:15">   1    1.0%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span></span><span class="ln" style="--i:16">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span></span><span class="ln" style="--i:17">   3    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span></span><span class="ln" style="--i:18">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span></span><span class="ln" style="--i:19">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span></span></pre>
         <figcaption>Real output: the audit of 20 benchmark sessions run without the rules.</figcaption>
       </figure>
     </div>
@@ -137,7 +137,7 @@
       <div class="bento">
         <article class="cell rules spot reveal">
           <h3>The rules</h3>
-          <p>About 850 tokens that change what the agent asks for.</p>
+          <p>About 770 tokens that change what the agent asks for.</p>
           <ol>
             <li><b>Locate, then read.</b> Size first, grep, read the range.</li>
             <li><b>Compute, don't read.</b> Data questions get a one-liner.</li>
@@ -217,7 +217,7 @@
         </details>
       </figure>
       <ul class="honest">
-        <li>The rules were piloted first (30 runs, &minus;23%). Two rules were added after reading those transcripts, so the feature task was written beforehand and never used for tuning.</li>
+        <li>The rules were piloted first (30 runs, &minus;23%). After reading those transcripts one rule was added and two were extended, so the feature task was written beforehand and never used for tuning.</li>
         <li>One model and four small tasks on a synthetic repo built around what leaks in real ones. Your numbers will differ: run the audit before and after.</li>
         <li>Every run, the exact rules used and the harness are <a href="https://github.com/Pazificateur69/tokenleak/tree/main/bench">in the repo</a>.</li>
       </ul>
@@ -227,7 +227,7 @@
   <section class="install" id="install">
     <div class="wrap install-grid">
       <div>
-        <h2>Install in one line.</h2>
+        <h2>Install in one step.</h2>
         <p class="sub">Pick your setup. MIT licensed, nothing to configure.</p>
       </div>
       <div class="tabs glass reveal">
@@ -239,7 +239,7 @@
           <button role="tab" id="t-audit" aria-controls="p-audit" aria-selected="false" tabindex="-1">Audit only</button>
         </div>
         <div class="panel" role="tabpanel" id="p-cc" aria-labelledby="t-cc">
-          <p>Plugin: rules in every session and subagent, plus the <code>/tokenleak</code> skill.</p>
+          <p>Plugin: rules in every session and subagent, a read guard for big files, and the <code>/tokenleak</code> skill.</p>
           <div class="cmd"><pre><code>/plugin marketplace add Pazificateur69/tokenleak
 /plugin install tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
@@ -254,7 +254,7 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
         </div>
         <div class="panel" role="tabpanel" id="p-md" aria-labelledby="t-md" hidden>
           <p>Always on, no install: append the rules to your instructions file.</p>
-          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk 'f>=2;/^---$/{f++}' >> AGENTS.md</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
         <div class="panel" role="tabpanel" id="p-audit" aria-labelledby="t-audit" hidden>
           <p>See your own leak score. Python 3.8+, nothing to install.</p>
@@ -270,7 +270,7 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
       <div class="qs">
         <details>
           <summary>Does it make the agent worse?</summary>
-          <p>Not in the benchmark: 20 of 20 tasks passed in both arms, each checked by a script. The rules forbid saving tokens by guessing a file, hiding the error or skipping verification.</p>
+          <p>Not in the benchmark: 20 of 20 runs passed in both arms, each checked by a script. The rules forbid saving tokens by guessing a file, hiding the error or skipping verification.</p>
         </details>
         <details>
           <summary>Isn't shorter output enough?</summary>
@@ -286,7 +286,7 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
         </details>
         <details>
           <summary>Does anything leave my machine?</summary>
-          <p>No. The audit reads files under <code>~/.claude/projects</code> and <code>~/.codex/sessions</code> and prints a report. It makes no network calls; the source is one readable Python file.</p>
+          <p>No. The audit reads files under <code>~/.claude/projects</code> and <code>~/.codex/sessions</code>, plus your <code>CLAUDE.md</code> and <code>AGENTS.md</code> to size them, and prints a report (or writes one with <code>--html</code>). It makes no network calls; the source is one readable Python file.</p>
         </details>
       </div>
     </div>

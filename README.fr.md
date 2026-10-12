@@ -17,12 +17,12 @@ La facture ne dépend donc pas de la longueur des réponses de l'agent, mais de 
 
 tokenleak fait deux choses :
 
-1. **Des règles** (un skill d'environ 850 tokens) pour que n'importe quel agent ne laisse entrer que ce dont la prochaine décision a besoin : localiser puis lire, calculer plutôt que lire les données, borner la sortie de chaque commande, ne jamais relire, grouper les appels indépendants, des diffs plutôt que des fichiers, éditer plutôt que réécrire. Avec des garde-fous : jamais d'économie en devinant un fichier ou en sautant une vérification.
+1. **Des règles** (un skill d'environ 770 tokens) pour que n'importe quel agent ne laisse entrer que ce dont la prochaine décision a besoin : localiser puis lire, calculer plutôt que lire les données, borner la sortie de chaque commande, ne jamais relire, grouper les appels indépendants, des diffs plutôt que des fichiers, éditer plutôt que réécrire. Avec des garde-fous : jamais d'économie en devinant un fichier ou en sautant une vérification.
 2. **Un audit** qui lit *tes* transcripts Claude Code et Codex et montre où sont vraiment partis les tokens : lectures surdimensionnées, logs bavards, appels gaspillés, allers-retours en série. Chacun est chiffré par la **taxe de contexte** qu'il a imposée, avec la règle qui le corrige. Local, lecture seule, zéro dépendance.
 
 ## Installation
 
-**Claude Code (plugin, recommandé)** : règles injectées au démarrage, après compaction et dans chaque sous-agent, plus le skill `/tokenleak`.
+**Claude Code (plugin, recommandé)** : règles injectées au démarrage, après compaction et dans chaque sous-agent, plus un **garde-fou de lecture** (la lecture entière d'un gros fichier texte est stoppée avec sa taille et le conseil de chercher d'abord ; passer `limit` passe toujours) et le skill `/tokenleak`. Désactivable avec `TOKENLEAK_GUARD=0`.
 
 ```
 /plugin marketplace add Pazificateur69/tokenleak
@@ -38,7 +38,7 @@ npx skills add Pazificateur69/tokenleak -g
 **Toujours actif, sans installation** : ajoute les règles à ton fichier d'instructions (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`…).
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk 'f>=2;/^---$/{f++}' >> AGENTS.md
+curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md
 ```
 
 ## L'audit

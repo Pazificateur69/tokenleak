@@ -22,6 +22,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/tokenleak/scripts/tokenleak.py\" guard || python \"${CLAUDE_PLUGIN_ROOT}/skills/tokenleak/scripts/tokenleak.py\" guard || true",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

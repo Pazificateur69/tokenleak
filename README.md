@@ -28,12 +28,12 @@ So the bill isn't driven by how chatty the agent is. It's driven by **what it le
 
 tokenleak does two things:
 
-1. **Rules** (a skill, ~850 tokens) that make any coding agent let in only what the next decision needs: locate then read, compute instead of reading data, bound every command's output, never re-read, batch independent calls, diffs over files, edit don't rewrite. With guardrails, so it never saves tokens by guessing or skipping verification.
+1. **Rules** (a skill, ~770 tokens) that make any coding agent let in only what the next decision needs: locate then read, compute instead of reading data, bound every command's output, never re-read, batch independent calls, diffs over files, edit don't rewrite. With guardrails, so it never saves tokens by guessing or skipping verification.
 2. **An audit** that reads *your own* Claude Code and Codex transcripts and shows where the tokens actually went: every oversized read, noisy log, wasted call and serial round-trip, priced by the **context tax** it imposed, with the rule that fixes it. Local, read-only, zero dependencies.
 
 ## Install
 
-**Claude Code (plugin, recommended).** Rules injected at session start, after compaction, and into every subagent. Adds the `/tokenleak` skill.
+**Claude Code (plugin, recommended).** Rules injected at session start, after compaction, and into every subagent, plus a **read guard**: a whole-file read of a big text file (over ~24 KB) is stopped with its size and a hint to grep first; passing `limit` always goes through. Adds the `/tokenleak` skill. Turn the guard off with `TOKENLEAK_GUARD=0`, or move its threshold with `TOKENLEAK_GUARD_BYTES`.
 
 ```
 /plugin marketplace add Pazificateur69/tokenleak
@@ -58,7 +58,7 @@ npx skills add Pazificateur69/tokenleak -g
 **Always on, any agent, no install.** Append the rules to your instructions file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`…):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk 'f>=2;/^---$/{f++}' >> AGENTS.md
+curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md
 ```
 
 ## The audit
@@ -76,24 +76,29 @@ Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak 
 |---|---|
 | `--since 24h \| 7d \| 4w \| 2026-10-01 \| all` | time window (default `7d`) |
 | `--here` / `--current` | sessions in this directory / only the latest one |
-| `--project TEXT`, `--session ID`, `--agent claude\|codex` | filters |
+| `PATH…` | audit specific transcript files or folders instead of the defaults |
+| `--project TEXT`, `--session ID`, `--agent all\|claude\|codex` | filters |
 | `--compare 2026-10-01` | before vs after a date, e.g. the day you installed the rules: leak score and cost per call |
 | `--top N` | individual leaks to list (default 10) |
 | `--json` | machine-readable, for CI or dashboards |
 | `--share` | small anonymized card for posting |
 | `--html report.html` | self-contained HTML report to open, screenshot or send (add `--redact` before sharing) |
 | `--redact` | hide commands, paths and project names |
+| `--no-color` | plain output |
 
 ### Project rules from your own leaks
 
 ```bash
-cd your-project && python3 tokenleak.py suggest
+cd your-project && tokenleak suggest   # or: python3 /path/to/tokenleak.py suggest
 ```
 
 Reads the last 30 days of sessions in that project and prints a block to paste into its `CLAUDE.md` or `AGENTS.md`, written from what actually leaked there. Illustrative output (yours depends on your sessions):
 
 ```markdown
+<!-- tokenleak suggest: 23 sessions in shop-api since 2026-09-12, leak score 11.2% -->
 ## Token hygiene for this repo
+
+Keep tool output out of the context; these are this repo's biggest repeat offenders:
 
 - `npm test` printed ~9.1k tokens per run (23x). Run it as `npm test --silent 2>&1 | tail -n 40` (iterate on the one failing test).
 - `git diff` printed ~3.0k tokens per run (5x). Run it as `git diff --stat` first, then `git diff -- <path>` for the files you need.
@@ -129,6 +134,7 @@ It prints `leak 3.1% A · ctx 84.2k · top big-read` (point the path at wherever
 | `wide-search` | a search that returned pages of matches | Narrow searches |
 | `big-fetch` | a web page or MCP/API payload dumped whole | Narrow fetches |
 | `rewrite` | a whole file rewritten to change a few lines | Edit, don't rewrite |
+| `big-result` | a subagent or another tool returned a huge result | Narrow searches and fetches |
 | `verbose-reply` | long recap prose | Answer lean |
 
 It also shows what's **always loaded**: your `CLAUDE.md` / `AGENTS.md` / memory files and the base context (system prompt, tools, MCP servers) re-sent on every call, with their share of your cost. Not counted as leaks, but often the cheapest win.
@@ -137,7 +143,7 @@ It also shows what's **always loaded**: your `CLAUDE.md` / `AGENTS.md` / memory 
 
 For each tool result: **context tax = avoidable tokens × (cache write + every later call in the same context × cache read)**, using each provider's relative prices (Claude: cache read 0.1×, cache write 1.25–2×, output 5×; Codex/GPT-5: cached 0.1×, output 8×). *Avoidable* is conservative: only the part above a sane budget (e.g. a 6k-token read counts as 4k avoidable), the full size only for exact repeats. The **leak score** is the share of your total token cost that was avoidable. Dollar amounts come from Claude Code's own per-session cost, never from a price table we maintain.
 
-Everything stays on your machine: no network, no telemetry, ~900 lines of stdlib Python you can read in ten minutes.
+Everything stays on your machine: no network, no telemetry, ~1,400 lines of stdlib Python you can read in ten minutes.
 
 ## Benchmark
 
@@ -151,10 +157,10 @@ A/B test in Claude Code (`claude -p`, Sonnet 5): same prompt, a fresh copy of th
 | add a feature *(held out, see below)* | $0.459 | $0.184 | **−60%** | 5/5 · 5/5 |
 | **total** | **$1.07** | **$0.64** | **−40%** | **20/20 · 20/20** |
 
-Median API-equivalent cost per run, as reported by Claude Code. On every task where it helped, the most expensive tokenleak run cost less than the cheapest run without it. Context tokens −28%, output tokens −17%. The image at the top is the audit of the 20 runs *without* the rules.
+Median API-equivalent cost per run, as reported by Claude Code. On every task where it helped, the most expensive tokenleak run cost less than the cheapest run without it. Context tokens −28%, output tokens −17%. The screenshot under [The audit](#the-audit) is the audit of the 20 runs *without* the rules.
 
 **Read it honestly.**
-- The rules were piloted first (v1, 30 runs: −23%, 15/15 vs 15/15). Reading those transcripts led to two new rules (check a file's size before opening it; compute, don't read data). So that this isn't tuning on the test, a fourth task, `add-feature`, was written before the change and never used to tune the rules: it shows the biggest gain. Both runs, with the exact rules used, are in [bench/results](bench/results).
+- The rules were piloted first (v1, 30 runs: −23%, 15/15 vs 15/15). Reading those transcripts led to one new rule (compute, don't read data) and two additions (check a file's size before opening it; chain shell steps into one command). So that this isn't tuning on the test, a fourth task, `add-feature`, was written before the change and never used to tune the rules: it shows the biggest gain. Both runs, with the exact rules used, are in [bench/results](bench/results).
 - One model, four small tasks, a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Your numbers will differ: run the audit on your own sessions before and after.
 - Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
 
@@ -185,16 +191,16 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 **What about rtk, caveman and the rest?** Complementary. rtk compresses command output at the shell level; output-style skills shorten replies. tokenleak changes *what the agent asks for* and measures the result on your real transcripts. Run the audit before and after anything you install.
 
-**What do the rules cost?** About 850 tokens, cached after the first call. One avoided full-file read pays for a whole session.
+**What do the rules cost?** About 770 tokens, cached after the first call. One avoided full-file read pays for a whole session.
 
 **Limitations.** Token sizes of individual results are estimated (~4 chars/token); session totals and costs are exact. "Avoidable" is a judgment, kept conservative. `serial-call` is a heuristic (it only flags a call whose target was already known and isn't mentioned in the previous result). Codex transcript formats change between versions; Claude Code is the best-tested path.
 
 ## Listed on
 
-[Skills Directory](https://www.skillsdirectory.com/skills/pazificateur69-tokenleak) · [vibecodes](https://vibecodes.net) · [Claude Market](https://www.claudemarket.ai/mcp)
+[Skills Directory](https://www.skillsdirectory.com/skills/pazificateur69-tokenleak) (security grade A). Find more tools like this on [Claude Market](https://www.claudemarket.ai/mcp).
 
 ## Contributing
 
-Issues and PRs welcome, especially transcripts formats from other agents (Gemini CLI, Cursor, OpenCode) and new leak detectors. Tests: `python3 -m unittest discover -s tests`. Benchmark: `python3 bench/run.py --runs 5`.
+Issues and PRs welcome, especially transcript formats from other agents (Gemini CLI, Cursor, OpenCode) and new leak detectors. Tests: `python3 -m unittest discover -s tests`. Benchmark: `python3 bench/run.py --runs 5`.
 
 MIT License.
