@@ -130,6 +130,7 @@ h1 { font-size: clamp(2.6rem, 4.5vw, 4.05rem); font-weight: 700; letter-spacing:
 .meter { margin: 0; font-size: .85rem; color: var(--muted); }
 .meter strong { font-family: var(--mono); font-size: 1.15rem; color: var(--accent-hi); font-weight: 600; margin: 0 2px; font-variant-numeric: tabular-nums; }
 .stack-card figcaption { color: #6d6d77; font-size: .76rem; margin-top: 8px; }
+@media (max-width: 560px) { #stack .note { font-size: 17px; } #stack .idx { font-size: 13px; } .stack-card { padding: 16px 14px 14px; } }
 
 /* Proof numbers */
 .proof { padding: 0 0 clamp(56px, 8vw, 104px); }
