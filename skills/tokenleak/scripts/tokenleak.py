@@ -18,7 +18,7 @@ import sys
 import time
 from datetime import datetime
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English

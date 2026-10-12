@@ -1,6 +1,6 @@
 {
   "name": "tokenleak",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Stop paying the context tax: token-lean rules for your agent and its subagents, plus an audit that finds where your tokens leak.",
   "author": {
     "name": "Pazificateur69",
@@ -9,7 +9,13 @@
   "homepage": "https://pazificateur69.github.io/tokenleak/",
   "repository": "https://github.com/Pazificateur69/tokenleak",
   "license": "MIT",
-  "keywords": ["tokens", "context", "cost", "efficiency", "audit"],
+  "keywords": [
+    "tokens",
+    "context",
+    "cost",
+    "efficiency",
+    "audit"
+  ],
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
   "interface": {
@@ -18,7 +24,10 @@
     "longDescription": "Lean-context rules injected at session start and into subagents, plus a local audit of your Codex and Claude Code transcripts that ranks every oversized read, noisy log and wasted round-trip.",
     "developerName": "Pazificateur69",
     "category": "Productivity",
-    "capabilities": ["Instructions", "Lifecycle hooks"],
+    "capabilities": [
+      "Instructions",
+      "Lifecycle hooks"
+    ],
     "websiteURL": "https://pazificateur69.github.io/tokenleak/",
     "defaultPrompt": [
       "Audit my token leaks for the last 30 days.",
