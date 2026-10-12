@@ -210,6 +210,8 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 **My agent already does some of this.** Good agents do. Claude Code, for one, already blocks re-reading an unchanged file; the audit counts those blocked attempts as wasted round-trips. The audit tells you how much is left on your own sessions, not on a demo.
 
+**ccusage or tokenleak?** Both read the same local transcripts. [ccusage](https://github.com/ryoppippi/ccusage) tells you how much you spent, by day, session or model. tokenleak tells you which tool results made it expensive and plugs them. They work well side by side.
+
 **What about rtk, caveman and the rest?** Complementary. rtk compresses command output at the shell level; output-style skills shorten replies. tokenleak changes *what the agent asks for* and measures the result on your real transcripts. Run the audit before and after anything you install.
 
 **What do the rules cost?** About 770 tokens, re-sent on every call from the cache: over a 60-call session, about as much as 5.5k tokens of fresh input. Keeping one 6k-token test log down to 800 tokens at call 5 of that session saves about six times that.

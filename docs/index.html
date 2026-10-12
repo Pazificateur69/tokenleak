@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tokenleak: stop paying the context tax</title>
+<title>tokenleak: cut Claude Code and Codex token costs</title>
 <meta name="description" content="Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks in your Claude Code and Codex sessions and plugs them. -32% cost over 80 A/B runs, same pass rate.">
 <meta name="theme-color" content="#09090b">
 <meta name="color-scheme" content="dark">
@@ -12,6 +12,8 @@
 <meta property="og:image" content="https://pazificateur69.github.io/tokenleak/og.png">
 <meta property="og:url" content="https://pazificateur69.github.io/tokenleak/">
 <meta property="og:type" content="website">
+<link rel="canonical" href="https://pazificateur69.github.io/tokenleak/">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"tokenleak","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","softwareVersion":"1.5.1","description":"Find and plug your coding agent's token leaks: lean-context rules and a read guard for Claude Code, Codex and Cursor, plus a local audit of your own transcripts.","url":"https://pazificateur69.github.io/tokenleak/","codeRepository":"https://github.com/Pazificateur69/tokenleak","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Pazificateur69","url":"https://github.com/Pazificateur69"}}</script>
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
@@ -279,6 +281,10 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
         <details>
           <summary>How accurate is the audit?</summary>
           <p>Session token totals come from the usage the transcripts record. The size of each tool result is estimated at about four characters per token, and "avoidable" only counts what exceeds a sane budget. It is an estimate: the audit can't know whether a big read was truly needed, so read each finding as a suspect and judge the trend with <code>--compare</code>.</p>
+        </details>
+        <details>
+          <summary>ccusage or tokenleak?</summary>
+          <p>Both read the same local transcripts. ccusage tells you how much you spent, by day, session or model. tokenleak tells you which tool results made it expensive and plugs them, with rules and a read guard. They work well side by side.</p>
         </details>
         <details>
           <summary>What about rtk, caveman and the rest?</summary>
