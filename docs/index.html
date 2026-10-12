@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tokenleak: stop paying the context tax</title>
 <meta name="description" content="Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks in your Claude Code and Codex sessions and plugs them. -40% cost on a 40-run A/B benchmark.">
-<meta name="theme-color" content="#111113" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#09090b">
+<meta name="color-scheme" content="dark">
 <meta property="og:title" content="tokenleak: stop paying the context tax">
 <meta property="og:description" content="Lean-context rules for any coding agent, plus an audit of your own Claude Code and Codex sessions. -40% cost on a 40-run A/B benchmark, same pass rate.">
 <meta property="og:image" content="https://pazificateur69.github.io/tokenleak/og.png">
@@ -15,19 +15,22 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="preload" href="fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<div class="aura" aria-hidden="true"></div>
 
 <header class="nav">
   <div class="wrap nav-row">
     <a class="brand" href="#top" aria-label="tokenleak home">
-      <img src="assets/logo.svg" alt="" width="28" height="28">
+      <img src="assets/logo.svg" alt="" width="26" height="26">
       <span>tokenleak</span>
     </a>
     <nav aria-label="Primary">
       <a href="#tax">How it works</a>
+      <a href="#audit">Audit</a>
       <a href="#benchmark">Benchmark</a>
       <a href="#install">Install</a>
       <a class="gh" href="https://github.com/Pazificateur69/tokenleak">
@@ -41,44 +44,60 @@
   <section class="hero" id="top">
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <h1>Stop paying the context&nbsp;tax.</h1>
+        <p class="pill"><span class="dot-logo" aria-hidden="true"></span>Open source skill for Claude Code, Codex and Cursor</p>
+        <h1>Stop paying the <span class="hl">context tax.</span></h1>
         <p class="lead">Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks and plugs them.</p>
         <div class="ctas">
           <a class="btn primary" href="#install">Install <span class="i i-arrow" aria-hidden="true"></span></a>
-          <a class="btn ghost" href="https://github.com/Pazificateur69/tokenleak"><span class="i i-github" aria-hidden="true"></span>Source</a>
+          <a class="btn ghost" href="#benchmark">Read the benchmark</a>
         </div>
       </div>
-      <figure class="hero-shot">
-        <img src="assets/demo-hero.svg" width="880" height="558" alt="Terminal output of the tokenleak audit: leak score 16.4 percent, grade C, with big file reads as the main leak and the rule that fixes each one.">
-        <figcaption>The audit, run on 20 agent sessions that did not have the rules.</figcaption>
+
+      <figure class="stack-card" aria-labelledby="stack-cap">
+        <div class="stack-head">
+          <div>
+            <p class="stack-title">One agent session</p>
+            <p class="stack-sub">Each bar is one API call. Its length is the context it sends.</p>
+          </div>
+          <div class="toggle" role="group" aria-label="Show the session">
+            <button type="button" data-mode="leak" aria-pressed="true">Without rules</button>
+            <button type="button" data-mode="lean" aria-pressed="false">With tokenleak</button>
+          </div>
+        </div>
+        <svg id="stack" viewBox="0 0 560 330" role="img" aria-label="Animated stack of 24 API calls. A 12,000-token test log read at call 3 is re-sent in every later call; with tokenleak it is bounded to 800 tokens."></svg>
+        <div class="stack-foot">
+          <div class="legend-mini">
+            <span><i class="k sys"></i>system prompt + tools</span>
+            <span><i class="k conv"></i>conversation</span>
+            <span><i class="k leak"></i>test log</span>
+          </div>
+          <p class="meter"><span id="meter-label">Log re-sent</span> <strong id="meter">0</strong> tokens</p>
+        </div>
+        <figcaption id="stack-cap">Illustration: a 12k-token test log read at call 3 of a 24-call session.</figcaption>
       </figure>
     </div>
   </section>
 
   <section class="proof" aria-label="Benchmark results in brief">
     <div class="wrap proof-row">
-      <div class="reveal"><strong>&minus;40%</strong><span>cost on a 40-run A/B benchmark in Claude Code</span></div>
-      <div class="reveal"><strong>20/20</strong><span>tasks passed, with and without the rules</span></div>
-      <div class="reveal"><strong>&minus;60%</strong><span>on the task held out from tuning the rules</span></div>
+      <div class="stat reveal"><strong data-count="-40" data-suffix="%">&minus;40%</strong><span>cost on a 40-run A/B benchmark in Claude Code</span></div>
+      <div class="stat reveal"><strong data-count="20" data-suffix="/20">20/20</strong><span>tasks passed, with and without the rules</span></div>
+      <div class="stat reveal"><strong data-count="-60" data-suffix="%">&minus;60%</strong><span>on the task held out from tuning the rules</span></div>
     </div>
   </section>
 
   <section class="tax" id="tax">
     <div class="wrap">
       <h2>One log, paid on every call.</h2>
-      <p class="sub">An agent re-sends its whole context with each request. Whatever it reads early is billed again and again until the session ends or compacts.</p>
-
-      <div class="calc reveal">
+      <p class="sub">The agent re-sends its whole context with each request. Whatever it reads early is billed again and again until the session ends or compacts. Try your own numbers.</p>
+      <div class="calc glass reveal">
         <div class="controls">
           <label><span class="lab"><span>Tool output size</span><span><output id="o-size">6,000</output> tokens</span></span>
-            <input type="range" id="size" min="500" max="20000" step="500" value="6000">
-          </label>
+            <input type="range" id="size" min="500" max="20000" step="500" value="6000"></label>
           <label><span class="lab"><span>Read at call</span><span><output id="o-at">5</output></span></span>
-            <input type="range" id="at" min="1" max="119" step="1" value="5">
-          </label>
+            <input type="range" id="at" min="1" max="119" step="1" value="5"></label>
           <label><span class="lab"><span>Session length</span><span><output id="o-len">60</output> calls</span></span>
-            <input type="range" id="len" min="10" max="120" step="1" value="60">
-          </label>
+            <input type="range" id="len" min="10" max="120" step="1" value="60"></label>
         </div>
         <div class="calls" id="calls" role="img" aria-label="Each square is one API call; highlighted squares re-send the tool output."></div>
         <div class="readout">
@@ -91,44 +110,87 @@
     </div>
   </section>
 
+  <section class="audit" id="audit">
+    <div class="wrap audit-grid">
+      <div class="audit-copy reveal">
+        <h2>See your own leaks in one command.</h2>
+        <p class="sub">The audit reads your Claude Code and Codex transcripts on your machine and prices every oversized read, noisy log and wasted round-trip by what it really cost you.</p>
+        <ul class="ticks">
+          <li>Local and read-only. No network, no telemetry.</li>
+          <li>One Python file, standard library only.</li>
+          <li>Shows what your <code>CLAUDE.md</code> costs on every call.</li>
+        </ul>
+      </div>
+      <figure class="term reveal" id="term">
+        <div class="term-bar"><i></i><i></i><i></i><span>~/my-project</span></div>
+        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py --since 30d">python3 tokenleak.py --since 30d</span><span class="caret" aria-hidden="true"></span></span>
+<span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.0.0  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span>
+<span class="ln" style="--i:1"> </span>
+<span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output</span>
+<span class="ln" style="--i:3"> </span>
+<span class="ln" style="--i:4">  <span class="b">LEAK SCORE</span>  <span class="b y">16.4%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span>
+<span class="ln" style="--i:5"> </span>
+<span class="ln" style="--i:6"><span class="d">  leak            count   avoidable  of cost   fix</span></span>
+<span class="ln" style="--i:7">  big-read           17      153.2k    14.3%   <span class="d">Locate, then read: grep -n first, then read o</span></span>
+<span class="ln" style="--i:8">  wide-search         4       11.4k     1.0%   <span class="d">Narrow searches: scope path/type, cap results</span></span>
+<span class="ln" style="--i:9">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span>
+<span class="ln" style="--i:10">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span>
+<span class="ln" style="--i:11"> </span>
+<span class="ln" style="--i:12">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span>
+<span class="ln" style="--i:13"> </span>
+<span class="ln" style="--i:14">  <span class="b">top leaks</span></span>
+<span class="ln" style="--i:15">   1    1.1%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span></span>
+<span class="ln" style="--i:16">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span></span>
+<span class="ln" style="--i:17">   3    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span></span>
+<span class="ln" style="--i:18">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span></span>
+<span class="ln" style="--i:19">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span></span></pre>
+        <figcaption>Real output: the audit of 20 benchmark sessions run without the rules.</figcaption>
+      </figure>
+    </div>
+  </section>
+
   <section class="parts" aria-label="What you get">
-    <div class="wrap bento">
-      <article class="cell rules reveal">
-        <h3>The rules</h3>
-        <p>A skill of about 850 tokens that changes what the agent asks for.</p>
-        <ol>
-          <li><b>Locate, then read.</b> Check the size, grep, read the range.</li>
-          <li><b>Compute, don't read.</b> Data questions get a one-liner.</li>
-          <li><b>Bound every command.</b> Log to a file, tail it, grep it.</li>
-          <li><b>Never re-read</b> what is already in context.</li>
-          <li><b>Batch independent calls</b> in one turn.</li>
-          <li><b>Diffs over files.</b> <code>git diff --stat</code> first.</li>
-          <li><b>Edit, don't rewrite.</b></li>
-          <li><b>Narrow searches and fetches.</b></li>
-          <li><b>Delegate wide exploration</b> to a subagent.</li>
-          <li><b>Answer lean.</b> Result first, no recap.</li>
-        </ol>
-        <p class="guard">Guardrails: never save tokens by hiding the real error, guessing a file, or skipping tests.</p>
-      </article>
-
-      <article class="cell audit reveal">
-        <h3>The audit</h3>
-        <p>Reads your own Claude Code and Codex transcripts, prices every oversized read, noisy log and wasted round-trip, and names the rule that fixes it.</p>
-        <pre><code>python3 tokenleak.py --since 30d</code></pre>
-        <p class="muted">Local and read-only. No network, no telemetry, standard library only.</p>
-      </article>
-
-      <article class="cell plugin reveal">
-        <h3>The plugin</h3>
-        <p>In Claude Code the rules load at session start, after every compaction, and inside every subagent you spawn.</p>
-        <p class="muted">Ask it to audit your tokens: you also see what your <code>CLAUDE.md</code> and session-start context cost on every call.</p>
-      </article>
+    <div class="wrap">
+      <h2 class="parts-title">Rules for the agent. Numbers for you.</h2>
+      <div class="bento">
+        <article class="cell rules spot reveal">
+          <h3>The rules</h3>
+          <p>About 850 tokens that change what the agent asks for.</p>
+          <ol>
+            <li><b>Locate, then read.</b> Size first, grep, read the range.</li>
+            <li><b>Compute, don't read.</b> Data questions get a one-liner.</li>
+            <li><b>Bound every command.</b> Log to a file, tail it, grep it.</li>
+            <li><b>Never re-read</b> what is already in context.</li>
+            <li><b>Batch independent calls</b> in one turn.</li>
+            <li><b>Diffs over files.</b> <code>git diff --stat</code> first.</li>
+            <li><b>Edit, don't rewrite.</b></li>
+            <li><b>Narrow searches and fetches.</b></li>
+            <li><b>Delegate wide exploration</b> to a subagent.</li>
+            <li><b>Answer lean.</b> Result first, no recap.</li>
+          </ol>
+          <p class="guard">Never saves tokens by hiding the real error, guessing a file, or skipping tests.</p>
+        </article>
+        <article class="cell status spot reveal">
+          <h3>Live leak meter</h3>
+          <p>Your current session's score, right in the Claude Code status line.</p>
+          <div class="statusline"><span class="g">leak 3.1% A</span> <span class="d">&middot;</span> ctx 84.2k <span class="d">&middot;</span> top big-read</div>
+        </article>
+        <article class="cell compare spot reveal">
+          <h3>Before and after</h3>
+          <p>Compare your leak score and cost per call around the day you installed it.</p>
+          <pre><code>tokenleak --compare 2026-10-01</code></pre>
+        </article>
+        <article class="cell plugin spot reveal">
+          <h3>Everywhere the agent works</h3>
+          <p>The plugin loads the rules at session start, after every compaction and in every subagent. In Claude Code and Codex.</p>
+        </article>
+      </div>
     </div>
   </section>
 
   <section class="works" aria-label="Works with">
-    <div class="wrap works-row">
-      <h2 class="works-title">Works with any agent that reads skills.</h2>
+    <p class="works-title">Works with any agent that reads skills</p>
+    <div class="marquee">
       <ul class="logos" aria-label="Compatible agents">
         <li><span class="logo l-claude" role="img" aria-label="Claude Code"></span></li>
         <li><span class="logo l-cursor" role="img" aria-label="Cursor"></span></li>
@@ -137,6 +199,10 @@
         <li><span class="logo l-windsurf" role="img" aria-label="Windsurf"></span></li>
         <li><span class="logo l-cline" role="img" aria-label="Cline"></span></li>
       </ul>
+      <ul class="logos" aria-hidden="true">
+        <li><span class="logo l-claude"></span></li><li><span class="logo l-cursor"></span></li><li><span class="logo l-gemini"></span></li>
+        <li><span class="logo l-copilot"></span></li><li><span class="logo l-windsurf"></span></li><li><span class="logo l-cline"></span></li>
+      </ul>
     </div>
   </section>
 
@@ -144,7 +210,7 @@
     <div class="wrap">
       <h2>Measured, not promised.</h2>
       <p class="sub">Same prompt, a fresh copy of the same repo for every run, five runs per arm. The only difference is the rules in the system prompt. A script checks every result.</p>
-      <figure class="chart reveal">
+      <figure class="chart glass reveal">
         <div class="legend" aria-hidden="true">
           <span><i class="sw base"></i>Without the rules</span>
           <span><i class="sw lean"></i>With tokenleak</span>
@@ -171,9 +237,9 @@
     <div class="wrap install-grid">
       <div>
         <h2>Install in one line.</h2>
-        <p class="sub">Pick your setup. Everything is MIT licensed.</p>
+        <p class="sub">Pick your setup. MIT licensed, nothing to configure.</p>
       </div>
-      <div class="tabs reveal">
+      <div class="tabs glass reveal">
         <div class="tablist" role="tablist" aria-label="Install options">
           <button role="tab" id="t-cc" aria-controls="p-cc" aria-selected="true">Claude Code</button>
           <button role="tab" id="t-codex" aria-controls="p-codex" aria-selected="false" tabindex="-1">Codex</button>
@@ -237,14 +303,17 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
 </main>
 
 <footer class="foot">
-  <div class="wrap foot-row">
-    <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="22" height="22"><span>tokenleak</span></a>
-    <p>MIT licensed. Built by <a href="https://github.com/Pazificateur69">Pazificateur69</a>. <a href="privacy.html">Privacy</a></p>
-    <a href="https://github.com/Pazificateur69/tokenleak">GitHub</a>
+  <div class="wrap">
+    <div class="foot-row">
+      <a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="22" height="22"><span>tokenleak</span></a>
+      <p>MIT licensed. Built by <a href="https://github.com/Pazificateur69">Pazificateur69</a>. <a href="privacy.html">Privacy</a></p>
+      <a href="https://github.com/Pazificateur69/tokenleak">GitHub</a>
+    </div>
+    <p class="wordmark" aria-hidden="true">tokenleak</p>
   </div>
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js?v=7" defer></script>
+<script src="app.js?v=10" defer></script>
 </body>
 </html>

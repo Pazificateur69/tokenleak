@@ -793,7 +793,7 @@ def print_report(totals, by_kind, findings, since, args, out=None):
     w(st("2", f"  {'leak':<14}{'count':>7}{'avoidable':>12}{'of cost':>9}   fix\n"))
     for kind, k in sorted(by_kind.items(), key=lambda kv: -kv[1]["cost"]):
         share = 100 * k["cost"] / totals["cost_units"] if totals["cost_units"] else 0
-        avoid = fmt(k["avoidable_tokens"]) if k["avoidable_tokens"] else "—"
+        avoid = fmt(k["avoidable_tokens"]) if k["avoidable_tokens"] else "-"
         w(f"  {kind:<14}{k['count']:>7}{avoid:>12}{share:>8.1f}%   {st('2', KINDS[kind][2])}\n")
     if totals["always_loaded"] or totals["avg_first_call_context"]:
         note = (fmt(totals["avg_first_call_context"]) + " tok at session start (system prompt, tools, MCP"

@@ -1,18 +1,148 @@
 document.documentElement.classList.add("js");
 
+const $ = (id) => document.getElementById(id);
+const nf = new Intl.NumberFormat("en-US");
+const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const once = (el, fn, threshold = 0.25) => {
+  const o = new IntersectionObserver((es) => { if (es[0].isIntersecting) { o.disconnect(); fn(); } }, { threshold });
+  o.observe(el);
+};
+const tween = (from, to, ms, step) => {
+  if (calm) return step(to);
+  const t0 = performance.now();
+  const tick = (t) => {
+    const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
+    step(from + (to - from) * e);
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+};
+
 // Scroll reveal (IntersectionObserver, no scroll listeners). CSS skips it under reduced motion.
 const io = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-}, { threshold: 0.15 });
+}, { threshold: 0.12 });
 document.querySelectorAll(".reveal").forEach((el) => {
-  const siblings = [...el.parentElement.children].filter((c) => c.classList.contains("reveal"));
-  el.style.setProperty("--d", `${siblings.indexOf(el) * 80}ms`);
+  const sib = [...el.parentElement.children].filter((c) => c.classList.contains("reveal"));
+  el.style.setProperty("--d", `${sib.indexOf(el) * 80}ms`);
   io.observe(el);
 });
 
+// Signature: one session as a stack of API calls. A test log read at call 3 is re-sent by every later call.
+(function stack() {
+  const svg = $("stack"), ns = "http://www.w3.org/2000/svg";
+  const CALLS = 24, READ_AT = 3, BASE = 28000, STEP = 1500, LEAK = 12000, LEAN = 800;
+  const X0 = 30, W = 520, top = 34, pitch = 12, h = 8;
+  const sx = (t) => (t / (BASE + STEP * CALLS + LEAK)) * W;
+  const el = (tag, a, text) => {
+    const n = document.createElementNS(ns, tag);
+    for (const k in a) n.setAttribute(k, a[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  svg.setAttribute("viewBox", `0 0 560 ${top + CALLS * pitch + 4}`);
+  const leakX = X0 + sx(BASE + STEP * READ_AT);
+  const rows = [], leaks = [], afters = [];
+  const noteLine = el("line", { class: "note-line", x1: leakX + 1, x2: leakX + 1, y1: 14, y2: top + READ_AT * pitch - 2 });
+  const note = el("text", { class: "note", x: leakX + 8, y: 18 }, "12k-token test log, read at call 3");
+  svg.append(noteLine, note);
+  for (let i = 1; i <= CALLS; i++) {
+    const y = top + (i - 1) * pitch;
+    const g = el("g", { class: "row" });
+    g.append(el("text", { class: "idx", x: X0 - 8, y: y + h - 1, "text-anchor": "end" }, String(i)));
+    g.append(el("rect", { class: "sys", x: X0, y, width: sx(BASE), height: h, rx: 2 }));
+    g.append(el("rect", { class: "conv", x: X0 + sx(BASE) + 1, y, width: Math.max(0, sx(STEP * Math.min(i, READ_AT)) - 1), height: h, rx: 2 }));
+    if (i > READ_AT) {
+      const lk = el("rect", { class: "leak", x: leakX + 1, y, width: sx(LEAK) - 1, height: h, rx: 2 });
+      const af = el("rect", { class: "conv after", x: leakX + sx(LEAK) + 1, y, width: Math.max(0, sx(STEP * (i - READ_AT)) - 1), height: h, rx: 2 });
+      g.append(lk, af);
+      leaks.push(lk);
+      afters.push(af);
+    }
+    svg.append(g);
+    rows.push(g);
+  }
+
+  const meter = $("meter"), buttons = [...document.querySelectorAll(".toggle button")];
+  let mode = "leak", shown = 0, value = 0, auto = !calm, timer = 0;
+  const target = () => Math.max(0, shown - READ_AT) * (mode === "leak" ? LEAK : LEAN);
+  const setMeter = () => {
+    const from = value, to = target();
+    value = to;
+    tween(from, to, 700, (v) => { meter.textContent = nf.format(Math.round(v)); });
+  };
+  function setMode(m) {
+    mode = m;
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+    const k = m === "leak" ? 1 : LEAN / LEAK, dx = m === "leak" ? 0 : -(sx(LEAK) - sx(LEAN));
+    leaks.forEach((r) => { r.style.transform = `scaleX(${k})`; });
+    afters.forEach((r) => { r.style.transform = `translateX(${dx}px)`; });
+    note.textContent = m === "leak" ? "12k-token test log, read at call 3" : "same log, bounded to 800 tokens";
+    setMeter();
+  }
+  buttons.forEach((b) => b.addEventListener("click", () => { auto = false; clearTimeout(timer); setMode(b.dataset.mode); }));
+
+  function loop() {
+    if (!auto) return;
+    timer = setTimeout(() => {
+      if (!auto) return;
+      setMode(mode === "leak" ? "lean" : "leak");
+      loop();
+    }, mode === "leak" ? 2600 : 3600);
+  }
+  function play() {
+    if (calm) {
+      rows.forEach((r) => r.classList.add("on"));
+      shown = CALLS;
+      return setMeter();
+    }
+    rows.forEach((r, i) => setTimeout(() => {
+      r.classList.add("on");
+      shown = i + 1;
+      if (shown > READ_AT) setMeter();
+      if (shown === CALLS) loop();
+    }, 120 + i * 105));
+  }
+  once(svg, play, 0.2);
+})();
+
+// Animated stats (final values are already in the HTML for no-JS readers)
+document.querySelectorAll("[data-count]").forEach((s) => {
+  const to = +s.dataset.count, suffix = s.dataset.suffix || "";
+  const show = (v) => { const r = Math.round(v); s.textContent = `${r < 0 ? "−" : ""}${Math.abs(r)}${suffix}`; };
+  if (calm) return;
+  show(0);
+  once(s, () => tween(0, to, 1400, show), 0.6);
+});
+
+// Terminal: type the command, then print the real report line by line
+(function terminal() {
+  const term = $("term"), typed = $("typed");
+  if (!term || !typed) return;
+  if (calm) { term.classList.add("run"); return; }
+  const text = typed.dataset.text;
+  typed.textContent = "";
+  once(term, () => {
+    let i = 0;
+    const tick = () => {
+      typed.textContent = text.slice(0, ++i);
+      if (i < text.length) setTimeout(tick, 34 + Math.random() * 40);
+      else setTimeout(() => term.classList.add("run"), 280);
+    };
+    setTimeout(tick, 350);
+  }, 0.35);
+})();
+
+// Spotlight cards: the glow follows the pointer
+document.querySelectorAll(".spot").forEach((c) => {
+  c.addEventListener("pointermove", (e) => {
+    const r = c.getBoundingClientRect();
+    c.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    c.style.setProperty("--my", `${e.clientY - r.top}px`);
+  });
+});
+
 // Context tax calculator. Claude ratios: cache write 1.25x, cache read 0.1x of fresh input.
-const $ = (id) => document.getElementById(id);
-const nf = new Intl.NumberFormat("en-US");
 const calls = $("calls");
 function renderTax() {
   const size = +$("size").value, len = +$("len").value;
@@ -24,13 +154,10 @@ function renderTax() {
   $("o-at").textContent = at;
   $("o-len").textContent = len;
   $("r-times").textContent = later;
-  const equiv = 1.25 + 0.1 * later;
-  $("r-equiv").textContent = equiv.toFixed(2);
+  $("r-equiv").textContent = (1.25 + 0.1 * later).toFixed(2);
   $("r-save").textContent = size > 800 ? `${Math.round(100 * (size - 800) / size)}%` : "0%";
   if (calls.children.length !== len) calls.replaceChildren(...Array.from({ length: len }, () => document.createElement("i")));
-  [...calls.children].forEach((c, i) => {
-    c.className = i + 1 === at ? "at" : i + 1 > at ? "re" : "";
-  });
+  [...calls.children].forEach((c, i) => { c.className = i + 1 === at ? "at" : i + 1 > at ? "re" : ""; });
 }
 ["size", "at", "len"].forEach((id) => $(id).addEventListener("input", renderTax));
 renderTax();
@@ -79,9 +206,8 @@ function renderChart() {
     const mb = median(r.base), ml = median(r.lean);
     svg.append(el("text", { class: "task", x: 0, y: narrow ? y - 26 : y - 4 }, r.task + (narrow ? `, ${r.note}` : "")));
     if (!narrow) svg.append(el("text", { class: "val", x: 0, y: y + 15 }, r.note));
-    const len = Math.abs(sx(mb) - sx(ml));
     const link = el("line", { class: "link draw", x1: sx(mb), x2: sx(ml), y1: y, y2: y });
-    link.style.setProperty("--len", len);
+    link.style.setProperty("--len", Math.abs(sx(mb) - sx(ml)));
     link.style.setProperty("--d", `${i * 120}ms`);
     svg.append(link);
     for (const [key, runs] of [["base", r.base], ["lean", r.lean]]) {
@@ -125,7 +251,7 @@ function renderChart() {
   }));
 }
 renderChart();
-new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { $("chart").classList.add("in"); o.disconnect(); } }, { threshold: 0.3 }).observe($("chart"));
+once($("chart"), () => $("chart").classList.add("in"), 0.3);
 let lastW = 0;
 new ResizeObserver(() => {
   const w = Math.round($("chart").clientWidth);
@@ -173,7 +299,7 @@ document.querySelectorAll(".copy").forEach((b) => {
   });
 });
 
-// Live star count (unauthenticated GitHub API; hidden if it fails)
+// Live star count (unauthenticated GitHub API; hidden if it fails or is zero)
 fetch("https://api.github.com/repos/Pazificateur69/tokenleak")
   .then((r) => (r.ok ? r.json() : Promise.reject()))
   .then((d) => {
