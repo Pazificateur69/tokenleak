@@ -14,8 +14,7 @@ sx = lambda t: t * scale
 leak_x = X0 + sx(BASE + STEP * READ_AT)
 k = LEAN / LEAK
 shift = sx(LEAK) - sx(LEAN)
-appear = 0.09  # seconds between rows
-start = 0.4 + CALLS * appear + 0.6  # when the loop starts
+start = 1.5  # bars are static (CSS entrance animations don't run reliably inside <img>); the loop starts here
 
 css = f"""
   .bg {{ fill: #09090b; }} .card {{ fill: #111114; stroke: rgba(255,255,255,.09); }}
@@ -25,7 +24,6 @@ css = f"""
   .t2 {{ fill: #8b8b95; font-size: 13px; }}
   .idx {{ fill: #55555f; font-size: 9px; }}
   .sys {{ fill: #26262d; }} .conv {{ fill: #3a3a45; }} .leak {{ fill: #f5a524; }}
-  .row {{ animation: in .5s ease-out backwards; }}
   .leak {{ transform-box: fill-box; transform-origin: left; animation: shrink {CYCLE}s cubic-bezier(.16,1,.3,1) {start}s infinite; }}
   .after {{ animation: slide {CYCLE}s cubic-bezier(.16,1,.3,1) {start}s infinite; }}
   .on-leak {{ animation: showA {CYCLE}s linear {start}s infinite; }}
@@ -37,12 +35,11 @@ css = f"""
   .note {{ fill: #ffc46b; font-size: 11px; font-weight: 600; }}
   .cap {{ fill: #6d6d77; font-size: 11px; }}
   .glow {{ filter: url(#glow); }}
-  @keyframes in {{ from {{ opacity: 0; transform: translateX(-8px); }} to {{ opacity: 1; transform: none; }} }}
   @keyframes shrink {{ 0%, 38% {{ transform: scaleX(1); }} 46%, 86% {{ transform: scaleX({k:.4f}); }} 94%, 100% {{ transform: scaleX(1); }} }}
   @keyframes slide {{ 0%, 38% {{ transform: translateX(0); }} 46%, 86% {{ transform: translateX(-{shift:.1f}px); }} 94%, 100% {{ transform: translateX(0); }} }}
   @keyframes showA {{ 0%, 39% {{ opacity: 1; }} 41%, 89% {{ opacity: 0; }} 91%, 100% {{ opacity: 1; }} }}
   @keyframes showB {{ 0%, 41% {{ opacity: 0; }} 43%, 87% {{ opacity: 1; }} 89%, 100% {{ opacity: 0; }} }}
-  @media (prefers-reduced-motion: reduce) {{ .row {{ animation: none; opacity: 1; }} .leak, .after, .on-leak, .on-lean {{ animation: none; }} }}
+  @media (prefers-reduced-motion: reduce) {{ .leak, .after, .on-leak, .on-lean {{ animation: none; }} }}
 """
 
 rows = []
@@ -54,7 +51,7 @@ for i in range(1, CALLS + 1):
     if i > READ_AT:
         parts.append(f'<rect class="leak glow" x="{leak_x + 1:.1f}" y="{y:.1f}" width="{sx(LEAK) - 1:.1f}" height="{BH}" rx="2"/>')
         parts.append(f'<rect class="conv after" x="{leak_x + sx(LEAK) + 1:.1f}" y="{y:.1f}" width="{sx(STEP * (i - READ_AT)) - 1:.1f}" height="{BH}" rx="2"/>')
-    rows.append(f'<g class="row" style="animation-delay:{0.4 + (i - 1) * appear:.2f}s">{"".join(parts)}</g>')
+    rows.append(f'<g class="row">{"".join(parts)}</g>')
 
 panel_x = X0 + BAR_W + 40
 re_sent = CALLS - READ_AT
