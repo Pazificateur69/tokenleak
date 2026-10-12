@@ -170,7 +170,7 @@ input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; curs
 .chart figcaption { color: var(--muted); font-size: .85rem; margin-top: 10px; }
 .as-table { margin-top: 14px; font-size: .92rem; }
 .as-table summary { cursor: pointer; color: var(--ink-2); width: fit-content; }
-.as-table table { border-collapse: collapse; margin-top: 12px; width: 100%; max-width: 640px; }
+.as-table table { border-collapse: collapse; margin-top: 12px; width: 100%; max-width: 640px; display: block; overflow-x: auto; }
 .as-table th, .as-table td { text-align: left; padding: 6px 12px 6px 0; }
 .as-table th { color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--line); }
 .as-table td { font-family: var(--mono); font-size: .88rem; }

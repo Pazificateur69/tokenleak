@@ -51,7 +51,11 @@ const pct = (b, l) => {
 
 function renderChart() {
   const host = $("chart");
-  const W = 900, rowH = 74, top = 12, left = 210, right = 70, H = top + BENCH.length * rowH + 34;
+  // Drawn at the container's real width so text stays at true size; narrow screens put labels above rows.
+  const W = Math.max(300, Math.round(host.clientWidth || 900));
+  const narrow = W < 640;
+  const rowH = narrow ? 96 : 74, top = narrow ? 34 : 12, left = narrow ? 6 : 210, right = narrow ? 50 : 70;
+  const H = top + BENCH.length * rowH + 34 - (narrow ? 24 : 0);
   const x0 = 0.1, x1 = 0.5;
   const sx = (v) => left + (v - x0) / (x1 - x0) * (W - left - right);
   const ns = "http://www.w3.org/2000/svg";
@@ -65,16 +69,16 @@ function renderChart() {
     "aria-label": "Dot plot of cost per run for four tasks, without and with tokenleak. Medians: " +
       BENCH.map((r) => `${r.task} ${usd(median(r.base))} to ${usd(median(r.lean))}`).join("; ") + "." });
   const grid = el("g", { class: "grid" }), axis = el("g", { class: "axis" });
-  for (let v = 0.1; v <= 0.5001; v += 0.1) {
+  for (let v = 0.1; v <= 0.5001; v += narrow ? 0.2 : 0.1) {
     grid.append(el("line", { x1: sx(v), x2: sx(v), y1: top, y2: H - 30 }));
     axis.append(el("text", { x: sx(v), y: H - 10, "text-anchor": "middle" }, `$${v.toFixed(2)}`));
   }
   svg.append(grid, axis);
   BENCH.forEach((r, i) => {
-    const y = top + i * rowH + rowH / 2;
+    const y = top + i * rowH + rowH / 2 - (narrow ? 12 : 0);
     const mb = median(r.base), ml = median(r.lean);
-    svg.append(el("text", { class: "task", x: 0, y: y - 4 }, r.task));
-    svg.append(el("text", { class: "val", x: 0, y: y + 15 }, r.note));
+    svg.append(el("text", { class: "task", x: 0, y: narrow ? y - 26 : y - 4 }, r.task + (narrow ? `, ${r.note}` : "")));
+    if (!narrow) svg.append(el("text", { class: "val", x: 0, y: y + 15 }, r.note));
     const len = Math.abs(sx(mb) - sx(ml));
     const link = el("line", { class: "link draw", x1: sx(mb), x2: sx(ml), y1: y, y2: y });
     link.style.setProperty("--len", len);
@@ -97,7 +101,6 @@ function renderChart() {
     svg.append(el("text", { class: "delta", x: W - right + 14, y: y + 4 }, pct(mb, ml)));
   });
   host.replaceChildren(svg);
-  new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { host.classList.add("in"); o.disconnect(); } }, { threshold: 0.3 }).observe(host);
 
   const tip = $("tip");
   svg.addEventListener("pointermove", (e) => {
@@ -110,6 +113,7 @@ function renderChart() {
   });
   svg.addEventListener("pointerleave", () => { tip.hidden = true; });
 
+  if ($("table").children.length) return;
   $("table").replaceChildren(...BENCH.map((r) => {
     const tr = document.createElement("tr");
     for (const v of [r.task, usd(median(r.base)), usd(median(r.lean)), pct(median(r.base), median(r.lean)), "5/5, 5/5"]) {
@@ -121,6 +125,12 @@ function renderChart() {
   }));
 }
 renderChart();
+new IntersectionObserver((es, o) => { if (es[0].isIntersecting) { $("chart").classList.add("in"); o.disconnect(); } }, { threshold: 0.3 }).observe($("chart"));
+let lastW = 0;
+new ResizeObserver(() => {
+  const w = Math.round($("chart").clientWidth);
+  if (Math.abs(w - lastW) > 8) { lastW = w; requestAnimationFrame(renderChart); }
+}).observe($("chart"));
 
 // Tabs (WAI-ARIA pattern: arrows move between tabs)
 const tabs = [...document.querySelectorAll('[role="tab"]')];
