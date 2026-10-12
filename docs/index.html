@@ -15,7 +15,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -40,7 +40,7 @@
 <main id="main">
   <section class="hero" id="top">
     <div class="wrap hero-grid">
-      <div class="hero-copy reveal">
+      <div class="hero-copy">
         <h1>Stop paying the context&nbsp;tax.</h1>
         <p class="lead">Everything your coding agent reads is re-sent on every later call. tokenleak finds the leaks and plugs them.</p>
         <div class="ctas">
@@ -48,7 +48,7 @@
           <a class="btn ghost" href="https://github.com/Pazificateur69/tokenleak"><span class="i i-github" aria-hidden="true"></span>Source</a>
         </div>
       </div>
-      <figure class="hero-shot reveal">
+      <figure class="hero-shot">
         <img src="assets/demo-hero.svg" width="880" height="558" alt="Terminal output of the tokenleak audit: leak score 16.4 percent, grade C, with big file reads as the main leak and the rule that fixes each one.">
         <figcaption>The audit, run on 20 agent sessions that did not have the rules.</figcaption>
       </figure>
@@ -239,6 +239,6 @@
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js" defer></script>
+<script src="app.js?v=4" defer></script>
 </body>
 </html>
