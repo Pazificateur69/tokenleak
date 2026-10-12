@@ -779,9 +779,9 @@ def print_report(totals, by_kind, findings, since, args, out=None):
         avoid = fmt(k["avoidable_tokens"]) if k["avoidable_tokens"] else "—"
         w(f"  {kind:<14}{k['count']:>7}{avoid:>12}{share:>8.1f}%   {st('2', KINDS[kind][2])}\n")
     if totals["always_loaded"] or totals["avg_first_call_context"]:
-        w(f"\n  {st('1', 'always loaded')}  ~{totals['base_context_pct']:.0f}% of cost  "
-          f"{st('2', fmt(totals['avg_first_call_context']) + ' tok at session start (system prompt, tools, MCP'
-                + (', files below' if totals['always_loaded'] else '') + '), re-sent every call')}\n")
+        note = (fmt(totals["avg_first_call_context"]) + " tok at session start (system prompt, tools, MCP"
+                + (", files below" if totals["always_loaded"] else "") + "), re-sent every call")
+        w(f"\n  {st('1', 'always loaded')}  ~{totals['base_context_pct']:.0f}% of cost  {st('2', note)}\n")
         home = os.path.expanduser("~")
         for e in totals["always_loaded"][:5]:
             share = pct_str(100 * e["cost"] / totals["cost_units"] if totals["cost_units"] else 0)
