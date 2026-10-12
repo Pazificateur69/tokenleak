@@ -81,6 +81,7 @@ Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak 
 | `--top N` | individual leaks to list (default 10) |
 | `--json` | machine-readable, for CI or dashboards |
 | `--share` | small anonymized card for posting |
+| `--html report.html` | self-contained HTML report to open, screenshot or send (add `--redact` before sharing) |
 | `--redact` | hide commands, paths and project names |
 
 ### Project rules from your own leaks

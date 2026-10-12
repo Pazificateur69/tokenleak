@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import html
 import io
 import json
 import os
@@ -18,7 +19,7 @@ import sys
 import time
 from datetime import datetime
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -908,6 +909,66 @@ def print_compare(a, b, since, split, args, out=None):
                       "\n  write 1.25-2x, output 5x). Task mix differs between periods: read it as a trend.\n\n"))
 
 
+HTML_CSS = """
+:root{--bg:#09090b;--panel:#111114;--line:rgba(255,255,255,.09);--ink:#f4f4f5;--ink2:#c6c6cd;--muted:#8b8b95;--amber:#f5a524;--amber2:#ffc46b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif}
+.w{max-width:1040px;margin:0 auto;padding:40px 20px 56px}code,.m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+h1{font-size:15px;margin:0;font-weight:650}.meta{color:var(--muted);font-size:13px;margin:4px 0 0}
+.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:28px 0}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.k{color:var(--muted);font-size:12.5px}.v{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:28px;letter-spacing:-.03em;margin-top:4px}
+.v.big{font-size:40px;color:var(--amber2)}.g{display:inline-block;margin-left:8px;font-size:15px;padding:2px 9px;border-radius:999px;border:1px solid rgba(245,165,36,.4);color:var(--amber2);vertical-align:middle}
+h2{font-size:16px;margin:30px 0 12px;font-weight:650}
+.row{display:grid;grid-template-columns:130px 70px minmax(0,1fr);gap:14px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.bar{height:8px;border-radius:4px;background:var(--amber);box-shadow:0 0 10px rgba(245,165,36,.4)}.fix{color:var(--muted);font-size:13px;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{color:var(--muted);font-weight:500;text-align:left;padding:7px 10px 7px 0;border-bottom:1px solid var(--line)}
+td{padding:8px 10px 8px 0;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}td.n{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.lab{word-break:break-all}.foot{color:var(--muted);font-size:12px;margin-top:30px}a{color:var(--amber2)}
+@media(max-width:760px){.hero{grid-template-columns:repeat(2,minmax(0,1fr))}.row{grid-template-columns:100px 56px minmax(0,1fr)}}
+"""
+
+
+def write_html(totals, by_kind, findings, since, args, path):
+    """Self-contained, shareable HTML report (no external assets)."""
+    esc = html.escape
+    when = datetime.fromtimestamp(since).strftime("%Y-%m-%d") if since else "the beginning"
+    units = totals["cost_units"] or 1
+    kinds = sorted(by_kind.items(), key=lambda kv: -kv[1]["cost"])
+    top_share = max((k["cost"] for _, k in kinds), default=1) or 1
+    money = f"${totals['usd_leak']:,.2f}" if totals["usd_leak"] else "n/a"
+    spend = f"${totals['usd_total']:,.2f}" if totals["usd_total"] else "n/a"
+    rows = "".join(
+        f'<div class="row"><div><code>{esc(kind)}</code></div><div class="m">{100 * k["cost"] / units:.1f}%</div>'
+        f'<div><div class="bar" style="width:{max(2, 100 * k["cost"] / top_share):.0f}%"></div>'
+        f'<div class="fix">{k["count"]} found. {esc(KINDS[kind][2])}</div></div></div>' for kind, k in kinds)
+    leaks = "".join(
+        f'<tr><td class="n">{100 * f.cost / units:.2f}%</td><td><code>{esc(f.kind)}</code></td>'
+        f'<td class="lab">{esc(label_of(f, args.redact))}</td><td class="n">{fmt(f.tokens)} tok'
+        f'{" x " + str(f.later) + " calls" if f.later else ""}</td></tr>' for f in findings[: args.top or 10])
+    projects = "" if args.redact or len(totals["projects"]) < 2 else (
+        "<h2>By project</h2><table><tr><th>Leak score</th><th>Project</th><th>Sessions</th><th>Avoidable</th></tr>" + "".join(
+            f'<tr><td class="n">{p["leak_pct"]:.1f}%</td><td class="lab">{esc(p["cwd"].replace(os.path.expanduser("~"), "~"))}</td>'
+            f'<td class="n">{p["sessions"]}</td><td class="n">{"$%.2f" % p["usd_leak"] if p["usd_leak"] else ""}</td></tr>'
+            for p in totals["projects"][:10]) + "</table>")
+    page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tokenleak report</title><style>{HTML_CSS}</style></head><body><div class="w">
+<h1>tokenleak report</h1><p class="meta">{totals['sessions']} sessions since {esc(when)}, {fmt(totals['api_calls'])} API calls, generated {datetime.now():%Y-%m-%d %H:%M}</p>
+<div class="hero">
+<div class="card"><div class="k">Leak score</div><div class="v big">{totals['leak_pct']:.1f}%<span class="g">{totals['grade']}</span></div></div>
+<div class="card"><div class="k">Avoidable spend</div><div class="v">{money}</div></div>
+<div class="card"><div class="k">Spend (API-equivalent)</div><div class="v">{spend}</div></div>
+<div class="card"><div class="k">Context processed</div><div class="v">{fmt(totals['context_tokens'])}</div></div>
+</div>
+<h2>Where it leaks</h2>{rows or '<p class="meta">No leaks found. Your agent is lean.</p>'}
+<h2>Top leaks</h2><table><tr><th>Of cost</th><th>Kind</th><th>What</th><th>Size</th></tr>{leaks}</table>
+{projects}
+<p class="foot">Leak score: share of token cost spent on avoidable context (A under 5%, B under 10%, C under 20%, D under 30%).
+Tokens are estimated at about 4 characters each; avoidable means the part above a sane budget, priced on every later call that re-sent it.
+Generated locally by <a href="{REPO}">tokenleak</a> {__version__}.</p></div></body></html>"""
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(page)
+
+
 def print_share(totals, by_kind, out=None):
     out = out or sys.stdout
     top = [k for k, _ in sorted(by_kind.items(), key=lambda kv: -kv[1]["cost"])][:3]
@@ -1137,6 +1198,7 @@ def main(argv=None):
     ap.add_argument("--top", type=int, default=10, help="how many individual leaks to list (default 10)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--share", action="store_true", help="small anonymized card to share")
+    ap.add_argument("--html", metavar="FILE", help="also write a self-contained HTML report to FILE")
     ap.add_argument("--redact", action="store_true", help="hide commands, paths and project names")
     ap.add_argument("--no-color", action="store_true")
     ap.add_argument("--version", action="version", version=f"tokenleak {__version__}")
@@ -1174,6 +1236,9 @@ def main(argv=None):
             print_compare(a, b, since, split, args)
         return 0
     totals, by_kind, findings, since = run(args)
+    if args.html:
+        write_html(totals, by_kind, findings, since, args, args.html)
+        print(f"tokenleak: report written to {os.path.abspath(args.html)}", file=sys.stderr)
     if args.json:
         json.dump(to_json(totals, by_kind, findings, args), sys.stdout, indent=2, default=str)
         sys.stdout.write("\n")

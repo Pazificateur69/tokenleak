@@ -241,6 +241,16 @@ class TokenleakTest(unittest.TestCase):
         self.assertIn("`catalog.py`", out)
         self.assertNotIn("elsewhere", out)
 
+    def test_html_report(self):
+        out = os.path.join(self.dir, "r.html")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([self.dir, "--since", "all", "--no-color", "--html", out, "--redact"])
+        page = open(out, encoding="utf-8").read()
+        self.assertIn("Leak score", page)
+        self.assertIn("big-read", page)
+        self.assertNotIn("/proj", page)  # --redact hides paths in the report too
+
     def test_rules_print_skill_body(self):
         buf = io.StringIO()
         with redirect_stdout(buf):
