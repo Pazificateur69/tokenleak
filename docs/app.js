@@ -44,7 +44,11 @@ document.querySelectorAll(".reveal").forEach((el) => {
   const leakX = X0 + sx(BASE + STEP * READ_AT);
   const rows = [], leaks = [], afters = [];
   const noteLine = el("line", { class: "note-line", x1: leakX + 1, x2: leakX + 1, y1: 14, y2: top + READ_AT * pitch - 2 });
-  const note = el("text", { class: "note", x: leakX + 8, y: 18 }, "12k-token test log, read at call 3");
+  const narrow = () => svg.getBoundingClientRect().width < 440;
+  const noteText = (m) => m === "leak"
+    ? (narrow() ? "12k-token test log" : "12k-token test log, read at call 3")
+    : (narrow() ? "bounded to 800 tokens" : "same log, bounded to 800 tokens");
+  const note = el("text", { class: "note", x: leakX + 8, y: 18 }, noteText("leak"));
   svg.append(noteLine, note);
   for (let i = 1; i <= CALLS; i++) {
     const y = top + (i - 1) * pitch;
@@ -77,7 +81,7 @@ document.querySelectorAll(".reveal").forEach((el) => {
     const k = m === "leak" ? 1 : LEAN / LEAK, dx = m === "leak" ? 0 : -(sx(LEAK) - sx(LEAN));
     leaks.forEach((r) => { r.style.transform = `scaleX(${k})`; });
     afters.forEach((r) => { r.style.transform = `translateX(${dx}px)`; });
-    note.textContent = m === "leak" ? "12k-token test log, read at call 3" : "same log, bounded to 800 tokens";
+    note.textContent = noteText(m);
     setMeter();
   }
   buttons.forEach((b) => b.addEventListener("click", () => { auto = false; clearTimeout(timer); setMode(b.dataset.mode); }));
