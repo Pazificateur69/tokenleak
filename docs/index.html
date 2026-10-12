@@ -16,7 +16,7 @@
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/GeistMono-Variable.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -123,27 +123,7 @@
       </div>
       <figure class="term reveal" id="term">
         <div class="term-bar"><i></i><i></i><i></i><span>~/my-project</span></div>
-        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py --since 30d">python3 tokenleak.py --since 30d</span><span class="caret" aria-hidden="true"></span></span>
-<span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.0.0  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span>
-<span class="ln" style="--i:1"> </span>
-<span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output</span>
-<span class="ln" style="--i:3"> </span>
-<span class="ln" style="--i:4">  <span class="b">LEAK SCORE</span>  <span class="b y">16.4%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span>
-<span class="ln" style="--i:5"> </span>
-<span class="ln" style="--i:6"><span class="d">  leak            count   avoidable  of cost   fix</span></span>
-<span class="ln" style="--i:7">  big-read           17      153.2k    14.3%   <span class="d">Locate, then read: grep -n first, then read o</span></span>
-<span class="ln" style="--i:8">  wide-search         4       11.4k     1.0%   <span class="d">Narrow searches: scope path/type, cap results</span></span>
-<span class="ln" style="--i:9">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span>
-<span class="ln" style="--i:10">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span>
-<span class="ln" style="--i:11"> </span>
-<span class="ln" style="--i:12">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span>
-<span class="ln" style="--i:13"> </span>
-<span class="ln" style="--i:14">  <span class="b">top leaks</span></span>
-<span class="ln" style="--i:15">   1    1.1%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span></span>
-<span class="ln" style="--i:16">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span></span>
-<span class="ln" style="--i:17">   3    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span></span>
-<span class="ln" style="--i:18">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span></span>
-<span class="ln" style="--i:19">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span></span></pre>
+        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py --since 30d">python3 tokenleak.py --since 30d</span><span class="caret" aria-hidden="true"></span></span><span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.0.0  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span><span class="ln" style="--i:1"> </span><span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output</span><span class="ln" style="--i:3"> </span><span class="ln" style="--i:4">  <span class="b">LEAK SCORE</span>  <span class="b y">16.4%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span><span class="ln" style="--i:5"> </span><span class="ln" style="--i:6"><span class="d">  leak            count   avoidable  of cost   fix</span></span><span class="ln" style="--i:7">  big-read           17      153.2k    14.3%   <span class="d">Locate, then read: grep -n first, then read o</span></span><span class="ln" style="--i:8">  wide-search         4       11.4k     1.0%   <span class="d">Narrow searches: scope path/type, cap results</span></span><span class="ln" style="--i:9">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span><span class="ln" style="--i:10">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span><span class="ln" style="--i:11"> </span><span class="ln" style="--i:12">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span><span class="ln" style="--i:13"> </span><span class="ln" style="--i:14">  <span class="b">top leaks</span></span><span class="ln" style="--i:15">   1    1.1%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span></span><span class="ln" style="--i:16">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span></span><span class="ln" style="--i:17">   3    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span></span><span class="ln" style="--i:18">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span></span><span class="ln" style="--i:19">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span></span></pre>
         <figcaption>Real output: the audit of 20 benchmark sessions run without the rules.</figcaption>
       </figure>
     </div>
@@ -314,6 +294,6 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js?v=10" defer></script>
+<script src="app.js?v=11" defer></script>
 </body>
 </html>
