@@ -32,4 +32,4 @@ Every tool result you pull into context is re-sent on **every later call** until
 
 ## Audit
 
-When asked to audit tokens or find leaks, run `python3 scripts/tokenleak.py` from this skill's directory (Python 3.8+, no dependencies, local and read-only). Use `--current` for the session you are in, `--here` for the current project, and `--since 30d` for a wider window. Report the leak score, the top 3 leak kinds, and the matching rule above.
+When asked to audit tokens or find leaks, run `python3 scripts/tokenleak.py` from this skill's directory (Python 3.8+, no dependencies, local and read-only). Use `--current` for the session you are in, `--here` for the current project, `--since 30d` for a wider window, and `--compare <date>` to compare before and after a date. Report the leak score, the top 3 leak kinds, and the matching rule above.

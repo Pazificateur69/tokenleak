@@ -173,6 +173,34 @@ class TokenleakTest(unittest.TestCase):
         self.assertIn("LEAK SCORE", out)
         self.assertNotIn("/proj", out)
 
+    def test_compare_splits_sessions_by_start_date(self):
+        old, new = claude_session(), claude_session()
+        for d in old:
+            d["timestamp"] = "2026-01-02T10:00:00.000Z"
+        for d in new:
+            d["timestamp"] = "2026-02-02T10:00:00.000Z"
+            d["sessionId"] = "s2"
+        d2 = tempfile.mkdtemp()
+        write_jsonl(os.path.join(d2, "old.jsonl"), old)
+        write_jsonl(os.path.join(d2, "new.jsonl"), new)
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            T.main([d2, "--compare", "2026-01-15", "--since", "all", "--json"])
+        data = json.loads(buf.getvalue())
+        self.assertEqual(data["before"]["sessions"], 1)
+        self.assertEqual(data["after"]["sessions"], 1)
+        self.assertAlmostEqual(data["before"]["leak_pct"], data["after"]["leak_pct"])
+
+    def test_statusline(self):
+        buf = io.StringIO()
+        T.statusline(io.StringIO(json.dumps({"transcript_path": self.claude})), buf)
+        line = buf.getvalue()
+        self.assertIn("leak ", line)
+        self.assertIn("ctx ", line)
+        buf = io.StringIO()
+        T.statusline(io.StringIO("{}"), buf)
+        self.assertEqual(buf.getvalue(), "tokenleak\n")
+
     def test_rules_print_skill_body(self):
         buf = io.StringIO()
         with redirect_stdout(buf):

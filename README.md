@@ -6,6 +6,13 @@
 Not leaked API keys: the tokens your AI agent burns on context it didn't need.</p>
 
 <p align="center">
+<a href="https://github.com/Pazificateur69/tokenleak/actions/workflows/test.yml"><img src="https://github.com/Pazificateur69/tokenleak/actions/workflows/test.yml/badge.svg" alt="tests"></a>
+<a href="https://www.skillsdirectory.com/skills/pazificateur69-tokenleak"><img src="https://www.skillsdirectory.com/api/skills/pazificateur69-tokenleak/badge" alt="Security: A on Skills Directory"></a>
+<img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="zero dependencies">
+<img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
+</p>
+
+<p align="center">
 <a href="https://pazificateur69.github.io/tokenleak/">Website</a> · <a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="README.fr.md">Français</a>
 </p>
 
@@ -59,10 +66,24 @@ Or from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask yo
 | `--since 24h \| 7d \| 4w \| 2026-10-01 \| all` | time window (default `7d`) |
 | `--here` / `--current` | sessions in this directory / only the latest one |
 | `--project TEXT`, `--session ID`, `--agent claude\|codex` | filters |
+| `--compare 2026-10-01` | before vs after a date, e.g. the day you installed the rules: leak score and cost per call |
 | `--top N` | individual leaks to list (default 10) |
 | `--json` | machine-readable, for CI or dashboards |
 | `--share` | small anonymized card for posting |
 | `--redact` | hide commands, paths and project names |
+
+### Live leak meter (Claude Code status line)
+
+See the current session's leak score while you work. Add to `~/.claude/settings.json`:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "python3 ~/.claude/plugins/marketplaces/tokenleak/skills/tokenleak/scripts/tokenleak.py statusline"
+}
+```
+
+It prints `leak 3.1% A · ctx 84.2k · top big-read` (point the path at wherever `tokenleak.py` lives if you didn't install the plugin).
 
 ### What it finds
 

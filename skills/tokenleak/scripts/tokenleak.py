@@ -18,7 +18,7 @@ import sys
 import time
 from datetime import datetime
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -97,6 +97,7 @@ class Thread:
         self.calls, self.uses, self.results, self.human_pos = [], [], [], []
         self.notes = []  # (pos, text) of user prompts: what the agent knew before calling tools
         self.cost_usd = None
+        self.start = None  # ISO timestamp of the first event
         self.mtime = os.path.getmtime(path)
 
 
@@ -146,6 +147,7 @@ def parse_claude(path):
             continue
         typ = d.get("type")
         t, calls, pending = state[bool(d.get("isSidechain"))]
+        t.start = t.start or d.get("timestamp")
         for th in (main, side):
             th.cwd = th.cwd or d.get("cwd")
             th.session = th.session or d.get("sessionId")
@@ -216,6 +218,7 @@ def parse_codex(path):
         if not isinstance(d, dict):
             continue
         typ, p = d.get("type"), d.get("payload") or {}
+        t.start = t.start or d.get("timestamp")
         if not isinstance(p, dict):
             continue
         if typ == "session_meta":
@@ -645,8 +648,13 @@ def project_name(t):
     return os.path.basename((t.cwd or "").rstrip("/")) or "?"
 
 
-def run(args):
-    since = 0.0 if args.paths and args.since is None else parse_since(args.since or "7d")
+def collect(args):
+    """Parse and filter the transcripts the CLI flags point at -> (threads, since)."""
+    if args.compare and args.since is None:  # default: a window of the same length before the split
+        split = parse_since(args.compare)
+        since = split - (time.time() - split)
+    else:
+        since = 0.0 if args.paths and args.since is None else parse_since(args.since or "7d")
     files = find_files(args.paths, args.agent, since)
     here = os.path.realpath(os.getcwd())
     threads = []
@@ -672,7 +680,16 @@ def run(args):
     if args.current and threads:
         latest = max((t for t in threads if not t.subagent), key=lambda t: t.mtime, default=None)
         threads = [t for t in threads if latest and t.session == latest.session]
+    return threads, since
 
+
+def run(args):
+    threads, since = collect(args)
+    return summarize(threads) + (since,)
+
+
+def summarize(threads):
+    """-> (totals, by_kind, findings sorted by cost) for a set of threads."""
     findings, units, sess, loaded, firsts, base_cost = [], 0.0, {}, {}, [], 0.0
     for t in threads:
         fs, u = analyze(t)
@@ -731,7 +748,7 @@ def run(args):
         k["avoidable_tokens"] += f.avoidable
         k["cost"] += f.cost
     findings.sort(key=lambda f: -f.cost)
-    return totals, by_kind, findings, since
+    return totals, by_kind, findings
 
 
 def label_of(f, redact):
@@ -806,6 +823,64 @@ def print_report(totals, by_kind, findings, since, args, out=None):
     w(f"\n  Plug the leaks: {REPO}\n\n")
 
 
+def epoch(iso):
+    try:
+        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def compare(args):
+    """Leak score before vs after a date: did installing the rules (or anything else) help?"""
+    threads, since = collect(args)
+    split = parse_since(args.compare)
+    # a subagent belongs to its parent session's period
+    starts = {}
+    for t in threads:
+        ts = epoch(t.start) if t.start else t.mtime
+        key = (t.agent, t.session or t.path)
+        starts[key] = min(starts.get(key, ts), ts if ts is not None else t.mtime)
+    before = [t for t in threads if starts[(t.agent, t.session or t.path)] < split]
+    after = [t for t in threads if starts[(t.agent, t.session or t.path)] >= split]
+    return summarize(before), summarize(after), since, split
+
+
+def top_kind(by_kind):
+    return max(by_kind, key=lambda k: by_kind[k]["cost"]) if by_kind else "none"
+
+
+def print_compare(a, b, since, split, args, out=None):
+    out = out or sys.stdout
+    st = Style((out.isatty() or bool(os.environ.get("FORCE_COLOR"))) and not args.no_color
+               and not os.environ.get("NO_COLOR"))
+    (ta, ka, _), (tb, kb, _) = a, b
+    day = lambda x: datetime.fromtimestamp(x).strftime("%Y-%m-%d")
+    out.write(f"\n{st('1', 'tokenleak')} {__version__}  {st('2', '·')}  before vs after {day(split)}"
+              f"  {st('2', '(sessions from ' + day(since) + ')')}\n\n")
+    if not ta["threads"] or not tb["threads"]:
+        side = "before" if not ta["threads"] else "after"
+        out.write(f"  No sessions {side} {day(split)} in this window. Widen it with --since.\n\n")
+        return
+    per_call = lambda t: t["cost_units"] / t["api_calls"] if t["api_calls"] else 0
+    rows = [
+        ("sessions", str(ta["sessions"]), str(tb["sessions"]), ""),
+        ("API calls", fmt(ta["api_calls"]), fmt(tb["api_calls"]), ""),
+        ("leak score", f"{ta['leak_pct']:.1f}% {ta['grade']}", f"{tb['leak_pct']:.1f}% {tb['grade']}",
+         f"{tb['leak_pct'] - ta['leak_pct']:+.1f} pts"),
+        ("cost per call", fmt(per_call(ta)), fmt(per_call(tb)),
+         f"{100 * (per_call(tb) - per_call(ta)) / per_call(ta):+.0f}%" if per_call(ta) else ""),
+        ("top leak", top_kind(ka), top_kind(kb), ""),
+    ]
+    if ta["usd_leak"] or tb["usd_leak"]:
+        rows.insert(3, ("avoidable spend", f"${ta['usd_leak'] or 0:,.2f}", f"${tb['usd_leak'] or 0:,.2f}", ""))
+    out.write(st("2", f"  {'':<17}{'before':>16}{'after':>16}{'change':>12}\n"))
+    for name, x, y, d in rows:
+        color = "32" if d.startswith("-") else "31" if d.startswith("+") else "2"
+        out.write(f"  {name:<17}{x:>16}{y:>16}{st(color, f'{d:>12}')}\n")
+    out.write(st("2", "\n  cost per call = token cost of one API call (input-equivalent tokens: cache read 0.1x,"
+                      "\n  write 1.25-2x, output 5x). Task mix differs between periods: read it as a trend.\n\n"))
+
+
 def print_share(totals, by_kind, out=None):
     out = out or sys.stdout
     top = [k for k, _ in sorted(by_kind.items(), key=lambda kv: -kv[1]["cost"])][:3]
@@ -841,6 +916,33 @@ def to_json(totals, by_kind, findings, args):
     }
 
 
+def statusline(stdin, out=None):
+    """Claude Code status line: live leak score of the current session (+ its subagents)."""
+    out = out or sys.stdout
+    try:
+        info = json.loads(stdin.read() or "{}")
+    except ValueError:
+        info = {}
+    path = info.get("transcript_path") or ""
+    if not path or not os.path.isfile(path):
+        out.write("tokenleak\n")
+        return
+    files = [path]
+    sub = os.path.join(path[: -len(".jsonl")] if path.endswith(".jsonl") else path, "subagents")
+    for dirpath, _, names in os.walk(sub):
+        files += [os.path.join(dirpath, n) for n in names if n.endswith(".jsonl")]
+    threads = [t for f in files for t in parse(f) if t.calls]
+    if not threads:
+        out.write("tokenleak: waiting for the first call\n")
+        return
+    totals, by_kind, _ = summarize(threads)
+    main = next((t for t in threads if not t.subagent), threads[0])
+    g = totals["grade"]
+    color = {"A": "32", "B": "32", "C": "33", "D": "31", "F": "31"}[g]
+    top = f" · top {top_kind(by_kind)}" if by_kind else ""
+    out.write(f"\033[{color}mleak {totals['leak_pct']:.1f}% {g}\033[0m · ctx {fmt(main.calls[-1].ctx_in)}{top}\n")
+
+
 def print_rules(out=None):
     out = out or sys.stdout
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "SKILL.md")
@@ -855,7 +957,8 @@ def main(argv=None):
         prog="tokenleak",
         description="Find where your coding agent leaks context tokens (Claude Code + Codex transcripts). "
                     "Local and read-only.",
-        epilog="`tokenleak rules` prints the rules to paste into AGENTS.md / CLAUDE.md / .cursorrules.")
+        epilog="`tokenleak rules` prints the rules to paste into AGENTS.md / CLAUDE.md / .cursorrules. "
+               "`tokenleak statusline` is a Claude Code status line (reads its JSON on stdin).")
     ap.add_argument("paths", nargs="*", help="transcript files or folders (default: ~/.claude/projects, ~/.codex/sessions)")
     ap.add_argument("--since", help="window: 24h, 7d (default), 4w, 2026-10-01, or all")
     ap.add_argument("--agent", choices=("all", "claude", "codex"), default="all")
@@ -863,6 +966,7 @@ def main(argv=None):
     ap.add_argument("--current", action="store_true", help="only the most recent session in this directory")
     ap.add_argument("--project", help="only sessions whose working dir contains this text")
     ap.add_argument("--session", help="only this session id (prefix ok)")
+    ap.add_argument("--compare", metavar="WHEN", help="before vs after a date (2026-10-01) or age (7d): e.g. when you installed the rules")
     ap.add_argument("--top", type=int, default=10, help="how many individual leaks to list (default 10)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--share", action="store_true", help="small anonymized card to share")
@@ -873,6 +977,9 @@ def main(argv=None):
     if argv[:1] == ["rules"]:
         print_rules()
         return 0
+    if argv[:1] == ["statusline"]:
+        statusline(sys.stdin)
+        return 0
     if argv[:1] == ["hook"]:  # Claude Code / Codex lifecycle hook: inject the rules as context
         buf = io.StringIO()
         print_rules(buf)
@@ -882,6 +989,15 @@ def main(argv=None):
     if argv[:1] == ["audit"]:
         argv = argv[1:]
     args = ap.parse_args(argv)
+    if args.compare:
+        a, b, since, split = compare(args)
+        if args.json:
+            json.dump({"version": __version__, "split": split, "before": a[0], "after": b[0],
+                       "before_by_kind": a[1], "after_by_kind": b[1]}, sys.stdout, indent=2, default=str)
+            sys.stdout.write("\n")
+        else:
+            print_compare(a, b, since, split, args)
+        return 0
     totals, by_kind, findings, since = run(args)
     if args.json:
         json.dump(to_json(totals, by_kind, findings, args), sys.stdout, indent=2, default=str)
