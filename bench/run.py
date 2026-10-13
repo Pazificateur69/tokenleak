@@ -38,8 +38,16 @@ TASKS = {
     "add-feature": "Add a `--category NAME` option to tools/report.py that keeps only the orders whose product is "
                    "in that category. `python3 -m tools.report data/orders.csv --category toys` must work and end "
                    "with its usual summary line.",
+    # one long session doing all four, so the context outgrows a compaction window
+    "chain": "Do these four tasks in this repo, in order. 1) The test suite (`python3 -m unittest`) is failing: fix "
+             "the root cause in the application code without modifying the tests. 2) `./build.sh` fails: fix the cause "
+             "so the build passes, without modifying build.sh. 3) Add a `--category NAME` option to tools/report.py that "
+             "keeps only the orders whose product is in that category; `python3 -m tools.report data/orders.csv "
+             "--category toys` must work and end with its usual summary line. 4) How many products in this repo's "
+             "catalog fall in the heavy shipping tariff and are currently out of stock (stock 0)? End your final reply "
+             "with a line `ANSWER: <number>`.",
 }
-VARIANTS = ("baseline", "tokenleak", "guard")  # guard = rules + the plugin's PreToolUse Read guard
+VARIANTS = ("baseline", "tokenleak", "guard", "compact")  # guard = rules + the plugin's PreToolUse Read guard
 SCRIPT = os.environ.get("TOKENLEAK_BENCH_SCRIPT") or os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")  # guard under test
 # Same for both variants: the agent can work in its repo (+ temp dirs) and cannot read your personal folders.
 HOME_DIRS = ["~/Desktop", "~/Documents", "~/Downloads", "~/Developer", "~/.claude", "~/.codex", "~/.ssh", "~/Library"]
@@ -67,6 +75,10 @@ def check(task, work, answer, expected, snap):
         return r.returncode == 0 and digest(glob.glob(os.path.join(work, "tests", "*.py"))) == snap["tests"]
     if task == "find-answer":
         return re.findall(r"\d+", answer or "") == [str(expected["t2_count"])]
+    if task == "chain":  # all four outcomes, in the same repo
+        m = re.findall(r"ANSWER:\s*(\d+)", answer or "")
+        return (bool(m) and m[-1] == str(expected["t2_count"]) and check("fix-test", work, None, expected, snap)
+                and check("fix-build", work, None, expected, snap) and check("add-feature", work, None, expected, snap))
     if task == "fix-build":
         r = sh("./build.sh")
         return (r.returncode == 0 and "report: 2400 orders" in r.stdout
@@ -125,6 +137,7 @@ def transcript_metrics(session_id):
         "context_tokens": sum(c.ctx_in for c in calls),
         "output_tokens": sum(c.out for c in calls),
         "max_context": max((c.ctx_in for c in calls), default=0),
+        "compactions": len({c.seg for c in calls}) - 1 if calls else 0,
         "usage": {"fresh": sum(c.fresh for c in calls), "cache_write_5m": sum(c.c5m for c in calls),
                   "cache_write_1h": sum(c.c1h for c in calls), "cache_read": sum(c.cread for c in calls),
                   "output": sum(c.out for c in calls)},
@@ -155,6 +168,8 @@ def run_one(task, variant, i, args, outdir, rules):
     snap = {"tests": digest(glob.glob(os.path.join(work, "tests", "*.py"))),
             "build": digest([os.path.join(work, "build.sh")])}
     settings = dict(SANDBOX)
+    if variant == "compact":  # Claude Code's own setting: auto-compact once the context reaches 100k tokens
+        settings["autoCompactWindow"] = 100000
     if variant == "guard":
         settings["hooks"] = {"PreToolUse": [{"matcher": "Read", "hooks": [
             {"type": "command", "command": f'python3 "{SCRIPT}" guard'}]}]}

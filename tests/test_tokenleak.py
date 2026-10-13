@@ -455,6 +455,28 @@ class TokenleakTest(unittest.TestCase):
             self.assertNotIn(fam + " " + flag + " 2>&1 |", advice)
         self.assertNotIn("--reporter", T.quiet_advice("npx jest"))
 
+    def test_compact_whatif(self):
+        def thread(sizes):
+            t = T.Thread(self.claude, "claude")
+            for i, n in enumerate(sizes):
+                c = T.Call(i, 0)
+                c.cread, c.c5m, c.out = n - 2000, 2000, 300
+                t.calls.append(c)
+            t.start_ctx = sizes[0]
+            return t
+        long = thread([60_000 + 5_000 * i for i in range(150)])   # grows to ~805k, never compacted
+        saved, added = T.compact_whatif([long], 300_000)
+        self.assertGreater(added, 0)
+        self.assertGreater(saved, 0)
+        short = thread([60_000 + 1_000 * i for i in range(20)])  # stays under 80k: nothing to gain
+        self.assertEqual(T.compact_whatif([short], 200_000), (0.0, 0))
+        units = sum(T.call_cost(short, c, T.weights(short)) for c in short.calls)
+        self.assertIsNone(T.context_window([short], units)["best"])
+        units = sum(T.call_cost(long, c, T.weights(long)) for c in long.calls)
+        best = T.context_window([long], units)["best"]
+        self.assertIn(best["setting"], T.COMPACT_SETTINGS)
+        self.assertGreaterEqual(best["saved_pct"], 5)
+
     def test_labels(self):
         self.assertEqual(T.tool_name("mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__guide"), "mcp:guide")
         self.assertEqual(T.tool_name("mcp__claude-in-chrome__read_page"), "claude-in-chrome:read_page")

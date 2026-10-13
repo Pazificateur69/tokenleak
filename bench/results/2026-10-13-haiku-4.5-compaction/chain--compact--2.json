@@ -1,0 +1,29 @@
+{
+  "task": "chain",
+  "variant": "compact",
+  "run": 2,
+  "wall_s": 122.8,
+  "pass": true,
+  "cost_usd": 0.3075848,
+  "num_turns": 21,
+  "session_id": "727bfd5a-1238-4c87-b473-1b494848b196",
+  "answer": "ANSWER: 9",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 19,
+  "context_tokens": 949393,
+  "output_tokens": 4065,
+  "max_context": 66762,
+  "compactions": 2,
+  "usage": {
+    "fresh": 154,
+    "cache_write_5m": 0,
+    "cache_write_1h": 63002,
+    "cache_read": 886237,
+    "output": 4065
+  },
+  "leak_pct": 4.07,
+  "leaks": {
+    "noisy-shell": 2
+  },
+  "escaped": false
+}

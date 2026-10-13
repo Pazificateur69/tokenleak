@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.5.1"
+__version__ = "1.6.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -346,7 +346,7 @@ def _main_segment(cmd):
     for seg in re.split(r"&&|\|\||;|\n", cmd):
         seg = seg.split("|")[0].strip()
         try:
-            words = shlex.split(seg)
+            words = shlex.split(seg) if any(ch in seg for ch in "'\"\\") else seg.split()
         except ValueError:
             words = seg.split()
         while words and (re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", words[0]) or words[0] in ("sudo", "time", "env")):
@@ -743,9 +743,70 @@ def collect(args):
     return threads, since
 
 
+COMPACT_SETTINGS = (200_000, 300_000, 400_000, 500_000)  # Claude Code accepts 100k-1M for autoCompactWindow
+COMPACT_FIRES_BELOW = 30_000  # measured: auto-compact fires ~30k tokens under the window setting
+
+
+def compact_whatif(threads, setting):
+    """-> (cost units saved, compactions added) had Claude Code auto-compacted at `setting` (autoCompactWindow).
+
+    Replays each main session's recorded context sizes. Every compaction is charged on the harsh side: its summary
+    call reads the whole context uncached, writes a 4k summary, the session restarts at its start context plus 20k
+    (summary and kept turns) and spends another 20k re-reading what it lost.
+    """
+    fire, saved, added = setting - COMPACT_FIRES_BELOW, 0.0, 0
+    for t in threads:
+        if t.agent != "claude" or t.subagent or not t.calls:
+            continue
+        w = weights(t)
+        new = (t.start_ctx or t.calls[0].ctx_in) + 20_000
+        segs = {}
+        for c in t.calls:
+            segs.setdefault(c.seg, []).append(c)
+        for calls in segs.values():
+            off = 0
+            for c in calls:
+                ctx = c.ctx_in - off
+                if ctx > fire > new:
+                    added += 1
+                    saved -= ctx + w["out"] * 4_000 + w["enter"] * new + 20_000
+                    off, ctx = c.ctx_in - new, new
+                saved += w["read"] * min(c.cread, c.ctx_in - ctx)
+    return saved, added
+
+
+def compact_setting():
+    """The auto-compact window this machine already sets, if any (env wins over settings, as in Claude Code)."""
+    env = os.environ.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW")
+    if env:
+        return env
+    path = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "settings.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f).get("autoCompactWindow")
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def run(args):
     threads, since = collect(args)
     return summarize(threads) + (since,)
+
+
+def context_window(threads, units):
+    """How big the main sessions' contexts got, and what an earlier auto-compact would have saved on them."""
+    ctx = [c.ctx_in for t in threads if t.agent == "claude" and not t.subagent for c in t.calls]
+    if not ctx or not units:
+        return None
+    options = []
+    for setting in COMPACT_SETTINGS:
+        saved, added = compact_whatif(threads, setting)
+        options.append({"setting": setting, "saved_pct": round(100 * saved / units, 1), "compactions": added})
+    top = max(o["saved_pct"] for o in options)
+    best = max((o for o in options if o["saved_pct"] >= top - 2), key=lambda o: o["setting"])  # fewest compactions
+    return {"calls": len(ctx), "over_200k_pct": round(100 * sum(1 for x in ctx if x > 200_000) / len(ctx), 1),
+            "max": max(ctx), "options": options, "best": best if best["saved_pct"] >= 5 else None,
+            "current": compact_setting()}
 
 
 def summarize(threads):
@@ -838,6 +899,7 @@ def summarize(threads):
         "base_context_pct": 100 * base_cost / units if units else 0,
         "always_loaded": sorted(({"path": f, **e} for f, e in loaded.items()), key=lambda e: -e["cost"]),
         "projects": by_project,
+        "context_window": context_window(threads, units),
     }
     by_kind = {}
     for f in findings:
@@ -929,6 +991,17 @@ def print_report(totals, by_kind, findings, since, args, out=None):
             usd = f"≈ ${pj['usd_leak']:,.2f} avoidable" if pj["usd_leak"] else ""
             n = f"{pj['sessions']} sessions"
             w(f"  {pj['leak_pct']:>6.1f}%  {name:<44} {st('2', f'{n:>12}')}  {st('2', usd)}\n")
+    cw = totals.get("context_window")
+    if cw and cw["best"]:
+        b = cw["best"]
+        w(f"\n  {st('1', 'context window')}  {cw['over_200k_pct']:.0f}% of calls carried over 200k tokens of context"
+          f" {st('2', '(max ' + fmt(cw['max']) + ')')}\n")
+        key = '"autoCompactWindow": ' + str(b["setting"])
+        gain = format(-b["saved_pct"], "+.0f") + "% cost"
+        more = "(" + str(b["compactions"]) + " more compactions)"
+        w(f"  replayed on these sessions: {st('1', key)} → {st('1;32', gain)} {st('2', more)}\n")
+        now = f" (now: {cw['current']})" if cw["current"] else ""
+        w(st("2", f"  set it with /config → Auto-compact window, or in ~/.claude/settings.json{now}\n"))
     if totals["always_loaded"] or totals["avg_first_call_context"]:
         note = (fmt(totals["avg_first_call_context"]) + " tok at session start (system prompt, tools, MCP"
                 + (", files below" if totals["always_loaded"] else "") + "), re-sent every call")
@@ -1064,6 +1137,11 @@ def write_html(totals, by_kind, findings, since, args, path):
             f'<tr><td class="n">{p["leak_pct"]:.1f}%</td><td class="lab">{esc(p["cwd"].replace(os.path.expanduser("~"), "~"))}</td>'
             f'<td class="n">{p["sessions"]}</td><td class="n">{"$%.2f" % p["usd_leak"] if p["usd_leak"] else ""}</td></tr>'
             for p in totals["projects"][:10]) + "</table>")
+    cw = totals.get("context_window") or {}
+    b = cw.get("best")
+    cw_html = (f'<p class="meta">Context window: {cw["over_200k_pct"]:.0f}% of calls carried over 200k tokens. Replayed on '
+               f'these sessions, <code>"autoCompactWindow": {b["setting"]}</code> would have cost {b["saved_pct"]:.0f}% less '
+               f'({b["compactions"]} more compactions).</p>') if b else ""
     page = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>tokenleak report</title><style>{HTML_CSS}</style></head><body><div class="w">
 <h1>tokenleak report</h1><p class="meta">{totals['sessions']} sessions since {esc(when)}, {fmt(totals['api_calls'])} API calls, generated {datetime.now():%Y-%m-%d %H:%M}</p>
@@ -1074,7 +1152,7 @@ def write_html(totals, by_kind, findings, since, args, path):
 <div class="card"><div class="k">Context processed</div><div class="v">{fmt(totals['context_tokens'])}</div></div>
 </div>
 <p class="meta">Cost split: context {totals['cost_split_pct']['context']:.0f}% (cache reads {totals['cost_split_pct']['cache_read']:.0f}%, cache writes and uncached input {totals['cost_split_pct']['cache_write']:.0f}%), output {totals['cost_split_pct']['output']:.0f}%. Context is what the model reads, output what it writes.</p>
-<h2>Where it leaks</h2>{rows or '<p class="meta">No leaks found. Your agent is lean.</p>'}
+{cw_html}<h2>Where it leaks</h2>{rows or '<p class="meta">No leaks found. Your agent is lean.</p>'}
 <h2>Top leaks</h2><table><tr><th>Of cost</th><th>Kind</th><th>What</th><th>Size</th></tr>{leaks}</table>
 {projects}
 <p class="foot">Leak score: share of token cost spent on avoidable context (A under 5%, B under 10%, C under 20%, D under 30%).

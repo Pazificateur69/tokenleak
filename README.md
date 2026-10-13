@@ -37,6 +37,23 @@ tokenleak does two things:
 1. **Rules** (a skill, ~770 tokens) that make any coding agent let in only what the next decision needs: locate then read, compute instead of reading data, bound every command's output, never re-read, batch independent calls, diffs over files, edit don't rewrite. With guardrails, so it never saves tokens by guessing or skipping verification.
 2. **An audit** that reads *your own* Claude Code and Codex transcripts and shows where the tokens actually went: every oversized read, noisy log, wasted call and serial round-trip, priced by the **context tax** it imposed, with the rule that fixes it. Local, read-only, zero dependencies.
 
+## Long sessions: the setting that matters most
+
+On a 1M-token context window, Claude Code auto-compacts only near the limit. Until then everything stays in context and is re-sent on every call: file reads, logs, and the model's own output. That last part is easy to miss: after a call that writes a lot, the next call's context grows by about as much (1.04x, measured over 1,977 such calls), so thinking, replies and tool calls are re-sent too. In the author's last 30 days of sessions, they were 42% of everything re-sent, about twice all tool results together (20%), and 66% of calls carried more than 200k tokens of context.
+
+Claude Code has a setting for exactly this, `autoCompactWindow`. The audit replays your own sessions with an earlier auto-compact and tells you what it would have saved:
+
+```
+  context window  66% of calls carried over 200k tokens of context (max 998.0k)
+  replayed on these sessions: "autoCompactWindow": 300000 → -22% cost (110 more compactions)
+```
+
+- **It errs against compacting.** Each extra compaction is charged on the harsh side: the summary call reads the whole context uncached, writes 4k tokens, and the session restarts with 20k of summary plus 20k of re-reads. On the short benchmark sessions below, this model predicted +91% for compacting at 100k; the real runs cost +59%.
+- **Quality held under the harshest setting.** The four benchmark tasks chained in one session, with `autoCompactWindow` at 100k (the lowest Claude Code accepts; 2 to 3 compactions mid-task): 5/5 passed, as did 5/5 without. [Runs](bench/results/2026-10-13-haiku-4.5-compaction).
+- **It is not free on short sessions.** In that same test compacting cost +59% and doubled the wall time: each compaction takes about 20 to 30 s, and its summary call never shows up in the transcript. So the audit only recommends a value when your own sessions say it pays (5% or more), and picks the largest one within 2 points of the best, to compact as rarely as possible.
+
+Set it with `/config` → Auto-compact window, or `"autoCompactWindow": 300000` in `~/.claude/settings.json`.
+
 ## Install
 
 **Claude Code (plugin, recommended).** Rules injected at session start, after compaction, and into every subagent, plus a **read guard**: a whole-file read of a big text file (over ~24 KB) is stopped, and for code and Markdown the agent gets the file's outline instead (definitions or headings with line numbers) so it can read just the part it needs; passing `limit` always goes through. Adds the `/tokenleak` skill. Turn the guard off with `TOKENLEAK_GUARD=0`, or move its threshold with `TOKENLEAK_GUARD_BYTES`.

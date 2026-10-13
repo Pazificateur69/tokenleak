@@ -1,0 +1,30 @@
+{
+  "task": "chain",
+  "variant": "compact",
+  "run": 4,
+  "wall_s": 173.5,
+  "pass": true,
+  "cost_usd": 0.4600239,
+  "num_turns": 22,
+  "session_id": "770d6bfe-6431-4571-9a9e-a30442a0da96",
+  "answer": "Looking at the complete catalog data I've now read, I need to find all products where weight_g > 1500 AND stock = 0.\n\nFrom my previous partial read of lines 1-424, I identified 6 products:\n- KT-0040: weight_g = 1600, stock = 0\n- KT-0120: weight_g = 1960, stock = 0\n- KT-0200: weight_g = 2320, stock = 0\n- KT-0280: weight_g = 2680, stock = 0\n- KT-0320: weight_g = 1560, stock = 0\n- KT-0400: weight_g = 1920, stock = 0\n\nFrom the newly read portion (lines 425-603), scanning for stock = 0:\n- Line 443: K",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 19,
+  "context_tokens": 995243,
+  "output_tokens": 6496,
+  "max_context": 69645,
+  "compactions": 3,
+  "usage": {
+    "fresh": 154,
+    "cache_write_5m": 0,
+    "cache_write_1h": 105406,
+    "cache_read": 889683,
+    "output": 6496
+  },
+  "leak_pct": 9.78,
+  "leaks": {
+    "noisy-shell": 2,
+    "big-read": 1
+  },
+  "escaped": false
+}

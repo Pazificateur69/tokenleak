@@ -2,6 +2,19 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.6.0 (2026-10-13)
+### New: the biggest lever for long sessions
+- **Context window replay.** On a 1M-token window Claude Code compacts only near the limit, so everything, the model's own output included, is re-sent on every call. The audit now replays your main Claude Code sessions with an earlier auto-compact (`autoCompactWindow` at 200k, 300k, 400k, 500k), charges every extra compaction on the harsh side, and recommends a value when it saves 5% or more (in the terminal report, `--html` and `--json` under `totals.context_window`). On the author's last 30 days: 66% of calls over 200k tokens, `300000` → −22% on the whole bill.
+- The skill's audit section explains the trade-off and offers to set it, only with the user's go-ahead. The rules injected in every session are unchanged (not one token more).
+
+### Measured
+- Real sessions (30 days, 23k calls): after a call that writes a lot, the next call's context grows by 1.04x that output, so the model's thinking, replies and tool calls stay in context; they were 42% of everything re-sent, tool results 20%.
+- Quality under compaction (Haiku 4.5, the four tasks chained in one session): `autoCompactWindow` 100k, the lowest Claude Code accepts, 2 to 3 compactions mid-task: 5/5 passed, as did 5/5 without. On those short sessions compacting cost +59% and doubled wall time, which is why the audit only recommends it when your own sessions show a gain. The replay model predicted +91% there: it overstates the cost of compacting.
+- `bench/run.py`: `chain` task (all four in one session) and `compact` variant; results in `bench/results/2026-10-13-haiku-4.5-compaction`.
+
+### Faster
+- Shell commands are split with `shlex` only when they contain quotes or escapes: a 30-day audit of 3.3 GB of transcripts went from 17 s to 14 s.
+
 ## 1.5.1 (2026-10-12)
 From an outside review (OpenAI Codex, read-only), each point checked against the code before changing it.
 
