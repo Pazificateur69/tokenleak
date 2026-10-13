@@ -17,11 +17,17 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 <a href="https://pazificateur69.github.io/tokenleak/">Website</a> · <a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="https://github.com/Pazificateur69/tokenleak/blob/main/README.fr.md">Français</a>
 </p>
 
-<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/demo.gif" alt="The audit on the author's last 30 days of Claude Code: what Claude wrote was 12% of the cost, context 88%; 62% of calls carried over 200k tokens of context; replaying the sessions with auto-compact at 300k estimates −21% cost." width="900"></p>
 
-**tokenleak's rules cut Claude Code's cost by 32% on Sonnet 5** (40 runs per arm, 95% CI −42% to −20%, 40/40 passed in both arms; −19% without the task that gained most). Small, synthetic tasks: [BENCHMARK.md](https://github.com/Pazificateur69/tokenleak/blob/main/BENCHMARK.md) has every number with its interval, including the ones that went the other way.
+<p align="center"><i>The audit on the author's last 30 days of Claude Code (370 sessions), run with <code>--redact</code>; dollar amounts cut from the recording.</i></p>
 
-**Try it first, nothing to install:** see where your own tokens went (Python 3.8+, stdlib only, reads your local transcripts, sends nothing). The script is pinned to a release; check its hash before running it:
+**Try it, nothing to set up:** see where your own tokens went. It reads your local transcripts and sends nothing (Python 3.8+, no dependencies).
+
+```bash
+uvx tokenleak --since 7d
+```
+
+No uv? `pipx run tokenleak --since 7d`. Prefer to read the code before running it? Take the single file, pinned to a release, and check its hash:
 
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/Pazificateur69/tokenleak/v1.9.0/skills/tokenleak/scripts/tokenleak.py
@@ -29,9 +35,13 @@ shasum -a 256 tokenleak.py   # 983cd19a96327d13d75d9fc13bbf75f6ea67e90369dcebe46
 python3 tokenleak.py --since 7d
 ```
 
+**tokenleak's rules cut Claude Code's cost by 32% on Sonnet 5** (40 runs per arm, 95% CI −42% to −20%, 40/40 passed in both arms; −19% without the task that gained most). Small, synthetic tasks: [BENCHMARK.md](https://github.com/Pazificateur69/tokenleak/blob/main/BENCHMARK.md) has every number with its interval, including the ones that went the other way.
+
 ## Why
 
 In an agent loop, **every tool result you let into context is re-sent on every later call** until the context is compacted. A 6k-token test log read at call 5 of a 60-call session gets paid ~55 more times. Every extra round-trip re-sends the whole context.
+
+<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
 So the bill isn't driven by how chatty the agent is. It's driven by **what it lets into its context, and how early**. In the [benchmark](#benchmark)'s runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was 7% of a run's cost on Sonnet and 10 to 11% on Haiku (medians); the rest was context. Shorter replies save the small part. The audit shows that split on your own sessions.
 
@@ -42,13 +52,13 @@ tokenleak does two things:
 
 ## Long sessions: the setting that matters most
 
-On a 1M-token context window, Claude Code auto-compacts only near the limit. Until then everything stays in context and is re-sent on every call: file reads, logs, and the model's own output. That last part is easy to miss: after a call that writes a lot, the next call's context grows by about as much (1.04x, measured over 1,977 such calls in the author's sessions), so thinking, replies and tool calls are re-sent too. In the author's last 30 days of sessions, they were 42% of everything re-sent, about twice all tool results together (20%), and 65% of calls carried more than 200k tokens of context.
+On a 1M-token context window, Claude Code auto-compacts only near the limit. Until then everything stays in context and is re-sent on every call: file reads, logs, and the model's own output. That last part is easy to miss: after a call that writes a lot, the next call's context grows by about as much (1.04x, measured over 1,977 such calls in the author's sessions), so thinking, replies and tool calls are re-sent too. In the author's last 30 days of sessions, they were 42% of everything re-sent, about twice all tool results together (20%), and 62% of calls carried more than 200k tokens of context.
 
 Claude Code has a native setting for exactly this, `autoCompactWindow`; tokenleak doesn't change how compaction works, it tells you whether and where to set it. The audit replays your own sessions with an earlier auto-compact and tells you what it would have saved. On the author's last 30 days:
 
 ```
-  context window  65% of calls carried over 200k tokens of context (max 998.0k)
-  replayed on these sessions: "autoCompactWindow": 300000 → -24% cost (109 more compactions)
+  context window  62% of calls carried over 200k tokens of context (max 998.0k)
+  replayed on these sessions: "autoCompactWindow": 300000 → -21% cost (111 more compactions)
 ```
 
 - **Measured live in the 1M regime.** Sonnet 5 with the 1M window, 4 runs per arm in two batches: read 36 large legacy modules, then seven tasks, then a question that needs what was read first. Default: context up to 757k, $5.40 median. With `autoCompactWindow` 300000: **$4.55 median (−16%, 95% CI −36% to −6%)**, context re-sent in the main session −80% (12.4M → 2.5M tokens; −78% counting the first batch's subagents), 4/4 passed in both arms, slower (315 s vs 245 s median). By batch: −26% when Sonnet handed the bulk read to a subagent (first batch, both runs), −11% when it read everything itself and compacted 2 to 3 times (second batch). These sessions are ~20 calls long, so compactions weigh a lot; the hundreds of calls of a real 1M session are what the replay prices. [Runs](https://github.com/Pazificateur69/tokenleak/blob/main/bench/results/2026-10-13-sonnet-5-1m-compaction).
@@ -101,11 +111,6 @@ python3 tokenleak.py --since 30d
 The report starts with where the money went (`cost split`: context, read from the cache or written to it, versus output), then every leak priced by its estimated context tax.
 
 Or install the CLI from [PyPI](https://pypi.org/project/tokenleak/): `uvx tokenleak` (or `pipx install tokenleak`, or `pip install tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
-
-<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/demo.svg" alt="tokenleak audit output: leak score, leak kinds with the rule that fixes each, top leaks" width="900"></p>
-
-*The screenshot is the audit of 20 benchmark runs without the rules.*
-
 | flag | |
 |---|---|
 | `--since 24h \| 7d \| 4w \| 2026-10-01 \| all` | time window (default `7d`) |

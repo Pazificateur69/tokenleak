@@ -18,9 +18,9 @@
   <p>tokenleak collects nothing. It has no telemetry, no analytics and makes no network requests.</p>
   <ul>
     <li>The rules are text added to your agent's context by a local hook. They stay between you and the AI provider you already use.</li>
-    <li>The audit (<code>tokenleak.py</code>) reads transcript files your agent already wrote on your machine (<code>~/.claude/projects</code>, <code>~/.codex/sessions</code>) and your instruction files (<code>CLAUDE.md</code>, <code>AGENTS.md</code>) to measure their size. It prints a report and writes nothing, unless you ask for an HTML report with <code>--html FILE</code>.</li>
+    <li>The audit (<code>tokenleak.py</code>) reads transcript files your agent already wrote on your machine (<code>~/.claude/projects</code>, <code>~/.codex/sessions</code>) and your instruction files (<code>CLAUDE.md</code>, <code>AGENTS.md</code>) to measure their size, and reads one setting, <code>autoCompactWindow</code>, from Claude Code's <code>settings.json</code> to show your current value. It prints a report and writes nothing, unless you ask: <code>--html FILE</code> writes an HTML report, and <code>tokenleak compact --apply</code> writes the recommended <code>autoCompactWindow</code> to that <code>settings.json</code>, after saving the old file as <code>settings.json.bak-tokenleak</code>.</li>
     <li>The Claude Code plugin's session-start hook may look at this project's recent transcripts, at most once a day, to tell you when an earlier auto-compact would have paid. It keeps one small file, <code>~/.cache/tokenleak/state.json</code>, with the dates it last checked. <code>TOKENLEAK_TIPS=0</code> turns it off.</li>
-    <li>It doesn't open credential stores, keychains or config files. Transcripts can contain secrets that once appeared in tool output; the audit reads them only on your machine. The report shows commands and file paths: add <code>--redact</code> before sharing it.</li>
+    <li>It doesn't open credential stores or keychains, and reads no config file other than that <code>settings.json</code>. Transcripts can contain secrets that once appeared in tool output; the audit reads them only on your machine. The report shows commands and file paths: add <code>--redact</code> before sharing it.</li>
   </ul>
 
   <h2>This website</h2>

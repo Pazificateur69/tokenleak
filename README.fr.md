@@ -7,6 +7,16 @@ Rien à voir avec des clés API qui fuient : il s'agit des tokens que ton agent 
 
 <p align="center"><a href="README.md">English</a></p>
 
+<p align="center"><img src="assets/demo.gif" alt="L'audit des 30 derniers jours de Claude Code de l'auteur : ce que Claude a écrit pèse 12 % du coût, le contexte 88 % ; 62 % des appels portaient plus de 200k tokens de contexte ; rejouées avec une compaction à 300k, ces sessions auraient coûté environ 21 % de moins (estimation)." width="900"></p>
+
+**Essaie-le, rien à installer :** vois où sont partis tes propres tokens. L'audit lit tes transcripts en local et n'envoie rien (Python 3.8+, aucune dépendance).
+
+```bash
+uvx tokenleak --since 7d
+```
+
+Sans uv : `pipx run tokenleak --since 7d`.
+
 **Les règles de tokenleak réduisent de 32 % le coût de Claude Code sur Sonnet 5** (40 runs par bras, IC à 95 % de −42 % à −20 %, 40/40 réussis des deux côtés ; −19 % sans la tâche qui gagne le plus). Tâches petites et synthétiques : [BENCHMARK.md](BENCHMARK.md) donne chaque chiffre avec son intervalle, y compris ceux qui vont dans l'autre sens.
 
 ## Pourquoi
@@ -22,7 +32,7 @@ tokenleak fait deux choses :
 
 ## Sessions longues : le réglage qui compte le plus
 
-Avec une fenêtre de contexte d'un million de tokens, Claude Code ne compacte qu'à l'approche de la limite. Jusque-là, tout reste dans le contexte et repart à chaque appel, y compris ce que le modèle a lui-même écrit (réflexion, réponses, appels d'outils) : 42 % de tout le contexte renvoyé dans les sessions de l'auteur sur 30 jours, plus que tous les résultats d'outils réunis. L'audit rejoue vos propres sessions avec une compaction plus précoce (`autoCompactWindow`, un réglage natif de Claude Code : tokenleak dit seulement s'il faut le régler, et à quelle valeur) et vous dit ce qu'elle aurait économisé ; sur ces 30 jours, `300000` donnait −24 % sur toute la facture. Mesuré en direct sur une session plus longue : une compaction précoce a réduit de 44 % le contexte renvoyé, à coût égal et qualité égale (4/4) ; en régime 1M (Sonnet 5, 4 runs par bras) : −16 % de coût (IC à 95 % : −36 % à −6 %). La qualité a tenu même au réglage le plus dur (100k, 1 à 3 compactions en pleine tâche : 12/12 runs Haiku et 3/3 Sonnet réussis), mais sur des sessions courtes la compaction coûte plus qu'elle ne rapporte : l'audit ne recommande une valeur que si vos sessions montrent un gain d'au moins 5 %. Détails et méthode : [README anglais](README.md#long-sessions-the-setting-that-matters-most).
+Avec une fenêtre de contexte d'un million de tokens, Claude Code ne compacte qu'à l'approche de la limite. Jusque-là, tout reste dans le contexte et repart à chaque appel, y compris ce que le modèle a lui-même écrit (réflexion, réponses, appels d'outils) : 42 % de tout le contexte renvoyé dans les sessions de l'auteur sur 30 jours, plus que tous les résultats d'outils réunis. L'audit rejoue vos propres sessions avec une compaction plus précoce (`autoCompactWindow`, un réglage natif de Claude Code : tokenleak dit seulement s'il faut le régler, et à quelle valeur) et vous dit ce qu'elle aurait économisé ; sur ces 30 jours, `300000` donnait −21 % sur toute la facture. Mesuré en direct sur une session plus longue : une compaction précoce a réduit de 44 % le contexte renvoyé, à coût égal et qualité égale (4/4) ; en régime 1M (Sonnet 5, 4 runs par bras) : −16 % de coût (IC à 95 % : −36 % à −6 %). La qualité a tenu même au réglage le plus dur (100k, 1 à 3 compactions en pleine tâche : 12/12 runs Haiku et 3/3 Sonnet réussis), mais sur des sessions courtes la compaction coûte plus qu'elle ne rapporte : l'audit ne recommande une valeur que si vos sessions montrent un gain d'au moins 5 %. Détails et méthode : [README anglais](README.md#long-sessions-the-setting-that-matters-most).
 
 ## Installation
 
