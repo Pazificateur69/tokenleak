@@ -37,7 +37,7 @@ class Packaging(unittest.TestCase):
         import hashlib
         readme = read("README.md") + read("README.fr.md") + read("docs", "index.html")
         with open(os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py"), "rb") as f:
-            digest = hashlib.sha256(f.read()).hexdigest()
+            digest = hashlib.sha256(f.read().replace(b"\r\n", b"\n")).hexdigest()  # Windows checkouts get CRLF; the release is LF
         pins = re.findall(r"tokenleak/(v[0-9.]+|main)/skills/tokenleak/(?:scripts/tokenleak\.py|SKILL\.md)", readme)
         self.assertTrue(pins)
         self.assertEqual(set(pins), {"v" + T.__version__})  # bump the README pin with every release
