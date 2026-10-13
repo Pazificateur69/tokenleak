@@ -54,7 +54,7 @@ Claude Code has a setting for exactly this, `autoCompactWindow`. The audit repla
 - **Quality held under the harshest setting.** `autoCompactWindow` at 100k, the lowest Claude Code accepts, with 1 to 3 compactions mid-task: 12/12 Haiku 4.5 runs and 3/3 Sonnet 5 runs passed every check, as did every run without it. Runs: [Haiku](bench/results/2026-10-13-haiku-4.5-compaction), [Sonnet](bench/results/2026-10-13-sonnet-5-compaction).
 - **It is not free on short sessions.** In that same test compacting cost +59% and doubled the wall time: each compaction takes about 20 to 30 s, and its summary call never shows up in the transcript. So the audit only recommends a value when your own sessions say it pays (5% or more), and picks the largest one within 2 points of the best, to compact as rarely as possible.
 
-`tokenleak compact` prints the full replay table for your sessions; `tokenleak compact --apply` writes the recommended value to `~/.claude/settings.json` (with a backup). Or set it yourself with `/config` → Auto-compact window.
+A plugin can't turn it on for you: Claude Code only lets a plugin ship the `agent` and `subagentStatusLine` settings. So tokenleak tells you (the audit, and a weekly note at session start when your sessions show a gain of 10% or more) and applies it only when you ask. `tokenleak compact` prints the full replay table for your sessions; `tokenleak compact --apply` writes the recommended value to `~/.claude/settings.json` (with a backup). Or set it yourself with `/config` → Auto-compact window.
 
 ## Install
 
