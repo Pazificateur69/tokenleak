@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.7.0"
+__version__ = "1.8.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -861,6 +861,54 @@ def compact_tip(event, now=None):
     return tip
 
 
+def compact_report(cw, apply=False, out=None):
+    """`tokenleak compact`: the replay table, and with --apply the recommended autoCompactWindow written to settings."""
+    out = out or sys.stdout
+    if not cw:
+        out.write("tokenleak: no Claude Code sessions in this window.\n")
+        return 1
+    out.write(f"{cw['over_200k_pct']:.0f}% of {fmt(cw['calls'])} main-session calls carried over 200k tokens of context "
+              f"(max {fmt(cw['max'])}). Replayed with an earlier auto-compact:\n\n  autoCompactWindow    cost   more compactions\n")
+    best = cw["best"]
+    for o in cw["options"]:
+        mark = "   <- recommended" if best and o["setting"] == best["setting"] else ""
+        out.write(f"  {o['setting']:>17}  {-o['saved_pct']:>+5.0f}%   {o['compactions']:>16}{mark}\n")
+    out.write(f"\n  now: {cw['current'] or 'not set (Claude Code compacts near the model limit)'}\n")
+    if not best:
+        out.write("  Nothing to gain on these sessions: leave it as it is.\n")
+        return 0
+    if str(cw["current"]) == str(best["setting"]):
+        out.write("  Already set.\n")
+        return 0
+    if not apply:
+        out.write("  Apply it: tokenleak compact --apply (writes ~/.claude/settings.json, keeps a backup), or /config\n")
+        return 0
+    if os.environ.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW"):
+        out.write("  CLAUDE_CODE_AUTO_COMPACT_WINDOW is set and wins over settings: change it there.\n")
+        return 1
+    path = os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "settings.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        data = json.loads(text or "{}")
+    except FileNotFoundError:
+        text, data = "", {}
+    except (OSError, ValueError) as e:
+        out.write(f"  Couldn't read {path} ({e}); nothing changed.\n")
+        return 1
+    if text:
+        with open(path + ".bak-tokenleak", "w", encoding="utf-8") as f:
+            f.write(text)
+    data["autoCompactWindow"] = best["setting"]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    out.write(f"  Set \"autoCompactWindow\": {best['setting']} in {path}" + (" (backup: .bak-tokenleak)" if text else "")
+              + ". New sessions use it.\n")
+    return 0
+
+
 def run(args):
     threads, since = collect(args)
     return summarize(threads) + (since,)
@@ -1638,6 +1686,12 @@ def _main(ap, argv):
                 out["systemMessage"] = tip
         json.dump(out, sys.stdout)
         return 0
+    if argv[:1] == ["compact"]:  # replay an earlier auto-compact; --apply writes the recommended setting
+        args = ap.parse_args([a for a in argv[1:] if a != "--apply"])
+        args.since = args.since or "30d"
+        args.agent = "claude"
+        totals = run(args)[0]
+        return compact_report(totals.get("context_window"), apply="--apply" in argv)
     if argv[:1] == ["audit"]:
         argv = argv[1:]
     args = ap.parse_args(argv)

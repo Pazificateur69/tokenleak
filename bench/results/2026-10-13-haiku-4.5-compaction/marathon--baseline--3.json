@@ -1,0 +1,30 @@
+{
+  "task": "marathon",
+  "variant": "baseline",
+  "run": 3,
+  "wall_s": 98.3,
+  "pass": true,
+  "cost_usd": 0.27862129999999996,
+  "num_turns": 24,
+  "session_id": "6dd04fda-8d94-40c0-9d08-5ed02ecf7ff5",
+  "answer": "Perfect! I've completed all the tasks:\n\n1. \u2713 Fixed test failure by changing `>` to `>=` in bulk_discount threshold check\n2. \u2713 Fixed build.sh by correcting function name from `ship_cost_for` to `ship_cost`\n3. \u2713 Added `--category NAME` filter to report.py\n4. \u2713 Added `--min-qty N` filter to report.py (combines with --category)\n5. \u2713 Added `--json` output format to report.py\n6. \u2713 Created tests/test_report_options.py with comprehensive tests - all 131 tests pass\n7. \u2713 Analyzed product catalog for heavy",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 24,
+  "context_tokens": 1501490,
+  "output_tokens": 6001,
+  "max_context": 84790,
+  "compactions": 0,
+  "usage": {
+    "fresh": 194,
+    "cache_write_5m": 0,
+    "cache_write_1h": 51733,
+    "cache_read": 1449563,
+    "output": 6001
+  },
+  "leak_pct": 16.04,
+  "leaks": {
+    "noisy-shell": 2,
+    "big-read": 1
+  },
+  "escaped": false
+}

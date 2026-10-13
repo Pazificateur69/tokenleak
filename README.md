@@ -48,12 +48,12 @@ Claude Code has a setting for exactly this, `autoCompactWindow`. The audit repla
   replayed on these sessions: "autoCompactWindow": 300000 → -24% cost (109 more compactions)
 ```
 
-- **Measured live.** A longer session (read three big files, then the four benchmark tasks; Haiku 4.5, 4 runs per arm): one early compaction cut the context re-sent by 45% (2.1M → 1.2M tokens), 4/4 passed in both arms, and the cost came out even (+2%). With about 20 calls after the compaction it just pays for itself; the hundreds of calls that follow in a long 1M session are where it saves.
-- **Calibrated on those runs, and it errs against compacting.** The replay charges every extra compaction its summary call (the whole context read uncached, 4k written), 15k of fresh summary and kept turns, and 10k of re-reads. It predicted +60% where compacting really cost +59% (short sessions) and +46% where it cost +2% (the longer ones).
-- **Quality held under the harshest setting.** `autoCompactWindow` at 100k, the lowest Claude Code accepts, with 1 to 3 compactions mid-task: 9/9 Haiku 4.5 runs and 3/3 Sonnet 5 runs passed every check, as did every run without it. Runs: [Haiku](bench/results/2026-10-13-haiku-4.5-compaction), [Sonnet](bench/results/2026-10-13-sonnet-5-compaction).
+- **Measured live, and it only pays on long sessions.** A session that jumps past 100k early (read three big files, then the four benchmark tasks; Haiku 4.5, 4 runs per arm): one compaction cut the context re-sent by 45% (2.1M → 1.2M tokens), 4/4 passed in both arms, cost even (+2%). Sessions that stay under ~90k (seven tasks in ~28 calls, 3 runs per arm): two compactions, 3/3 passed, but +26% cost. On the hundreds of calls of a long 1M session the saving is what the replay computes; on short ones it is a loss, and the replay says so.
+- **Calibrated on those runs, and it errs against compacting.** The replay charges every extra compaction its summary call (the whole context read uncached, 4k written), 15k of fresh summary and kept turns, and 10k of re-reads. On the three measured series it predicted +60% (real +59%), +46% (real +2%) and +36% (real +26%).
+- **Quality held under the harshest setting.** `autoCompactWindow` at 100k, the lowest Claude Code accepts, with 1 to 3 compactions mid-task: 12/12 Haiku 4.5 runs and 3/3 Sonnet 5 runs passed every check, as did every run without it. Runs: [Haiku](bench/results/2026-10-13-haiku-4.5-compaction), [Sonnet](bench/results/2026-10-13-sonnet-5-compaction).
 - **It is not free on short sessions.** In that same test compacting cost +59% and doubled the wall time: each compaction takes about 20 to 30 s, and its summary call never shows up in the transcript. So the audit only recommends a value when your own sessions say it pays (5% or more), and picks the largest one within 2 points of the best, to compact as rarely as possible.
 
-Set it with `/config` → Auto-compact window, or `"autoCompactWindow": 300000` in `~/.claude/settings.json`.
+`tokenleak compact` prints the full replay table for your sessions; `tokenleak compact --apply` writes the recommended value to `~/.claude/settings.json` (with a backup). Or set it yourself with `/config` → Auto-compact window.
 
 ## Install
 

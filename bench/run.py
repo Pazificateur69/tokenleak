@@ -9,6 +9,7 @@ CLAUDE.md, plugins, skills or MCP servers (--setting-sources project, --strict-m
 with the rules, i.e. what the plugin's SessionStart hook injects.
 """
 import argparse
+import csv
 import concurrent.futures as cf
 import glob
 import hashlib
@@ -48,6 +49,18 @@ TASKS = {
              "with a line `ANSWER: <number>`.",
 }
 # a longer session: the same four tasks after reading three big files, so the context climbs well past 100k
+# a long session (~50 calls): seven tasks in a row, each checked
+TASKS["marathon"] = (
+    "Work through these tasks in this repo, one after the other, checking each before moving on. 1) The test suite "
+    "(`python3 -m unittest`) is failing: fix the root cause in the application code; do not modify the existing tests. "
+    "2) `./build.sh` fails: fix the cause without modifying build.sh. 3) Add `--category NAME` to tools/report.py: keep "
+    "only the orders whose product is in that category; the run must still end with its usual summary line. 4) Add "
+    "`--min-qty N` to tools/report.py: keep only the orders with qty >= N (it must combine with --category). 5) Add "
+    "`--json` to tools/report.py: instead of the final summary line, print one JSON object on the last line, "
+    '{"orders": <count>, "revenue_cents": <total in cents>}. 6) Add tests for --category, --min-qty and --json in a new '
+    "file tests/test_report_options.py, and make sure `python3 -m unittest` passes. 7) How many products in the "
+    "catalog fall in the heavy shipping tariff and are out of stock (stock 0)? End your final reply with a line "
+    "`ANSWER: <number>`.")
 TASKS["chain-long"] = ("Start by reading shopcart/catalog.py, tests/test_cart.py and data/orders.csv in full, and tell me "
                        "in two lines what each one holds. Then: " + TASKS["chain"])
 VARIANTS = ("baseline", "tokenleak", "guard", "compact")  # guard = rules + the plugin's PreToolUse Read guard
@@ -78,6 +91,8 @@ def check(task, work, answer, expected, snap):
         return r.returncode == 0 and digest(glob.glob(os.path.join(work, "tests", "*.py"))) == snap["tests"]
     if task == "find-answer":
         return re.findall(r"\d+", answer or "") == [str(expected["t2_count"])]
+    if task == "marathon":
+        return check_marathon(work, answer, expected, snap)
     if task in ("chain", "chain-long"):  # all four outcomes, in the same repo
         m = re.findall(r"ANSWER:\s*(\d+)", answer or "")
         return (bool(m) and m[-1] == str(expected["t2_count"]) and check("fix-test", work, None, expected, snap)
@@ -97,6 +112,41 @@ def check(task, work, answer, expected, snap):
                 return False
         return True
     raise ValueError(task)
+
+
+def check_marathon(work, answer, expected, snap):
+    def sh(cmd):
+        return subprocess.run(cmd, cwd=work, shell=True, capture_output=True, text=True, timeout=300)
+
+    def report(arg):
+        r = sh("python3 -m tools.report data/orders.csv" + arg)
+        lines = r.stdout.strip().splitlines()
+        return r.returncode, lines, [l for l in lines if l.startswith("report: order ")]
+
+    with open(os.path.join(work, "data", "orders.csv")) as f:
+        rows = list(csv.DictReader(f))
+    big = sum(1 for r in rows if int(r["qty"]) >= 5)
+    big_toys = sum(1 for r in rows if int(r["qty"]) >= 5 and r["sku"].startswith("TY-"))
+    old_tests = [p for p in glob.glob(os.path.join(work, "tests", "*.py")) if not p.endswith("test_report_options.py")]
+    m = re.findall(r"ANSWER:\s*(\d+)", answer or "")
+    if not (m and m[-1] == str(expected["t2_count"]) and digest(old_tests) == snap["tests"]
+            and os.path.exists(os.path.join(work, "tests", "test_report_options.py"))
+            and sh("python3 -m unittest").returncode == 0 and check("fix-build", work, None, expected, snap)
+            and check("add-feature", work, None, expected, snap)):
+        return False
+    for arg, n, test in ((" --min-qty 5", big, lambda l: int(re.search(r"qty=(\d+)", l).group(1)) >= 5),
+                         (" --category toys --min-qty 5", big_toys,
+                          lambda l: " sku=TY-" in l and int(re.search(r"qty=(\d+)", l).group(1)) >= 5)):
+        rc, lines, orders = report(arg)
+        if not (rc == 0 and lines and lines[-1].startswith(f"report: {n} orders") and len(orders) == n
+                and all(test(l) for l in orders)):
+            return False
+    rc, lines, _ = report(" --json")
+    try:
+        data = json.loads(lines[-1])
+    except (ValueError, IndexError):
+        return False
+    return rc == 0 and data.get("orders") == 2400 and isinstance(data.get("revenue_cents"), int)
 
 
 def safe_check(*a):
@@ -160,6 +210,7 @@ def escaped(transcript, work):
             for c in ((d.get("message") or {}).get("content") or []) if d.get("type") == "assistant" else []:
                 if isinstance(c, dict) and c.get("type") == "tool_use":
                     s = json.dumps(c.get("input")).replace(work, "")
+                    s = re.sub(r"[^\"\s]*/\.claude/projects/[^\"\s]*/tool-results/[^\"\s]*", "", s)  # Claude Code's own saved outputs
                     if home in s or "~/" in s or re.search(r"find /[\s\"]", s):
                         return True
     return False

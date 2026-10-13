@@ -502,6 +502,38 @@ class TokenleakTest(unittest.TestCase):
             os.environ.clear()
             os.environ.update(old)
 
+    def test_compact_command_applies_only_when_asked(self):
+        cfg = os.path.join(self.dir, "cfg")
+        proj = os.path.join(cfg, "projects", "-proj")
+        os.makedirs(proj)
+        lines = []
+        for i in range(120):
+            lines += assistant(f"m{i}", u(cread=50_000 + 5_000 * i, c5m=2_000, out=400), {"type": "text", "text": "ok"})
+        write_jsonl(os.path.join(proj, "s.jsonl"), lines)
+        settings = os.path.join(cfg, "settings.json")
+        with open(settings, "w") as f:
+            json.dump({"model": "opus[1m]"}, f)
+        old = dict(os.environ)
+        os.environ["CLAUDE_CONFIG_DIR"] = cfg
+        os.environ.pop("CLAUDE_CODE_AUTO_COMPACT_WINDOW", None)
+        try:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                T.main(["compact", "--since", "all"])
+            self.assertIn("<- recommended", buf.getvalue())
+            with open(settings) as f:
+                self.assertNotIn("autoCompactWindow", json.load(f))   # read-only without --apply
+            with redirect_stdout(io.StringIO()):
+                T.main(["compact", "--since", "all", "--apply"])
+            with open(settings) as f:
+                data = json.load(f)
+            self.assertIn(data["autoCompactWindow"], T.COMPACT_SETTINGS)
+            self.assertEqual(data["model"], "opus[1m]")                # the rest is kept
+            self.assertTrue(os.path.exists(settings + ".bak-tokenleak"))
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+
     def test_labels(self):
         self.assertEqual(T.tool_name("mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__guide"), "mcp:guide")
         self.assertEqual(T.tool_name("mcp__claude-in-chrome__read_page"), "claude-in-chrome:read_page")

@@ -2,6 +2,16 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.8.0 (2026-10-13)
+### New
+- `tokenleak compact`: the replay table for your Claude Code sessions (cost at 200k, 300k, 400k, 500k and the extra compactions), the recommended value, and what you have set now. `tokenleak compact --apply` writes the recommended `autoCompactWindow` to `~/.claude/settings.json`, keeping the rest of the file and a `.bak-tokenleak` backup. Nothing is written without `--apply`.
+
+### Measured
+- A third live series, against compacting: seven tasks in one session (~28 calls, context under ~90k; Haiku 4.5, 3 runs per arm). Compacting at 100k: 3/3 passed, as without, but +26% cost and slower. The replay predicted +36%, so on all three measured series it errs against compacting. Quality under compaction now stands at 12/12 Haiku 4.5 and 3/3 Sonnet 5.
+
+### Fixed
+- Benchmark: reading Claude Code's own saved tool outputs (`~/.claude/projects/…/tool-results/`, used after a compaction) was counted as leaving the repo.
+
 ## 1.7.0 (2026-10-13)
 ### New
 - **The plugin tells you.** At session start (Claude Code, at most once a day, in about 0.4 s) the hook replays this project's recent sessions; if an earlier auto-compact would have saved 10% or more and you haven't set one, it says so once a week. It is a message to you, never added to the model's context, so it costs no tokens. `TOKENLEAK_TIPS=0` silences it; it keeps one small file, `~/.cache/tokenleak/state.json`.

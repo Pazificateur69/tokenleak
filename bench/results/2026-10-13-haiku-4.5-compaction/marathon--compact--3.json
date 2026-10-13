@@ -1,0 +1,29 @@
+{
+  "task": "marathon",
+  "variant": "compact",
+  "run": 3,
+  "wall_s": 188.7,
+  "pass": true,
+  "cost_usd": 0.4053536999999999,
+  "num_turns": 31,
+  "session_id": "4b4b4017-817e-4144-8641-7848c953ebb2",
+  "answer": "All tasks complete:\n\n**Summary of what was done:**\n\n- **Task 3**: Added `--category NAME` option to filter orders by product category\n- **Task 4**: Added `--min-qty N` option to filter by qty >= N (works in combination with --category)\n- **Task 5**: Added `--json` option to output a single JSON object with order count and revenue in cents\n- **Task 6**: Created `tests/test_report_options.py` with comprehensive tests for all three options - all 131 tests pass\n- **Task 7**: Found products in the he",
+  "model": "claude-haiku-4-5-20251001",
+  "api_calls": 29,
+  "context_tokens": 1473560,
+  "output_tokens": 7763,
+  "max_context": 67371,
+  "compactions": 2,
+  "usage": {
+    "fresh": 234,
+    "cache_write_5m": 0,
+    "cache_write_1h": 74141,
+    "cache_read": 1399185,
+    "output": 7763
+  },
+  "leak_pct": 2.93,
+  "leaks": {
+    "noisy-shell": 2
+  },
+  "escaped": false
+}
