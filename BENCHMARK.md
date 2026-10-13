@@ -6,12 +6,14 @@ Everything tokenleak's numbers rest on: how the runs were made, every result wit
 
 | what was tested | model | runs per task and arm | cost change | 95% CI | passed |
 |---|---|---|---|---|---|
-| `autoCompactWindow` 300000 on a 1M-context session | Sonnet 5 | 4 | **−16%** | −36% to −6% | 4/4 · 4/4 |
 | the rules, four small tasks | Sonnet 5 | 10 | **−32%** | −42% to −20% | 40/40 · 40/40 |
 | rules + read guard with outline (v1.5), four tasks, batch 2 | Haiku 4.5 | 5 | **−28%** | −35% to −13% | 20/20 · 20/20 |
 | rules + read guard (v1.4), four tasks, batch 1 | Haiku 4.5 | 5 | −20% | −31% to −4% | 20/20 · 20/20 |
 | the rules alone, four tasks, batch 1 | Haiku 4.5 | 5 | −1% | −20% to +21% | 20/20 · 20/20 |
+| `autoCompactWindow` 300000 on a 1M-context session (a native Claude Code setting) | Sonnet 5 | 4 | **−16%** | −36% to −6% | 4/4 · 4/4 |
 | `autoCompactWindow` 100000 on short sessions | Haiku 4.5 | 3 to 5 | **+26%** | +8% to +38% | 12/12 · 12/12 |
+
+In the four-task runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was 7% of a run's cost on Sonnet 5 and 9.6% and 11.2% on Haiku 4.5 (two batches; medians of the per-run output share, from each record's `usage`); the rest was context.
 
 Two things the intervals make plain:
 
