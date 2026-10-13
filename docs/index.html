@@ -13,7 +13,7 @@
 <meta property="og:url" content="https://pazificateur69.github.io/tokenleak/">
 <meta property="og:type" content="website">
 <link rel="canonical" href="https://pazificateur69.github.io/tokenleak/">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"tokenleak","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","softwareVersion":"1.8.2","description":"Find and plug your coding agent's token leaks: lean-context rules and a read guard for Claude Code, Codex and Cursor, plus a local audit of your own transcripts.","url":"https://pazificateur69.github.io/tokenleak/","codeRepository":"https://github.com/Pazificateur69/tokenleak","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Pazificateur69","url":"https://github.com/Pazificateur69"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"tokenleak","applicationCategory":"DeveloperApplication","operatingSystem":"macOS, Linux, Windows","softwareVersion":"1.9.0","description":"Find and plug your coding agent's token leaks: lean-context rules for Claude Code, Codex and Cursor, a read guard for Claude Code, plus a local audit of your own transcripts.","url":"https://pazificateur69.github.io/tokenleak/","codeRepository":"https://github.com/Pazificateur69/tokenleak","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Person","name":"Pazificateur69","url":"https://github.com/Pazificateur69"}}</script>
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
@@ -82,9 +82,9 @@
 
   <section class="proof" aria-label="Benchmark results in brief">
     <div class="wrap proof-row">
-      <div class="stat reveal"><strong data-count="-32" data-suffix="%">&minus;32%</strong><span>cost over 80 A/B runs in Claude Code (Sonnet 5)</span></div>
+      <div class="stat reveal"><strong data-count="-32" data-suffix="%">&minus;32%</strong><span>cost with the rules alone, over 80 A/B runs in Claude Code (Sonnet 5)</span></div>
       <div class="stat reveal"><strong data-count="40" data-suffix="/40">40/40</strong><span>runs passed, with and without the rules</span></div>
-      <div class="stat reveal"><strong data-count="-80" data-suffix="%">&minus;80%</strong><span>context tokens on 1M-token sessions, measured live (one setting)</span></div>
+      <div class="stat reveal"><strong data-count="-16" data-suffix="%">&minus;16%</strong><span>cost on 1M-token sessions (4 runs per arm, 80% less context re-sent), from a native Claude Code setting the audit recommends</span></div>
     </div>
   </section>
 
@@ -104,11 +104,11 @@
         <div class="calls" id="calls" role="img" aria-label="Each square is one API call; highlighted squares re-send the tool output."></div>
         <div class="readout">
           <p class="first"><span class="big" id="r-times">55</span> later calls re-send it.</p>
-          <p>That one read costs as much as <strong id="r-equiv">6.75</strong> fresh reads of the same text.</p>
+          <p>That one read costs as much as <strong id="r-equiv">7.40</strong> fresh reads of the same text.</p>
           <p class="muted">Bounded to 800 tokens with <code>tail -n 40</code>, it would cost <strong id="r-save">87%</strong> less.</p>
         </div>
       </div>
-      <p class="fine">Claude pricing ratios: cache write 1.25&times;, cache read 0.1&times; of fresh input.</p>
+      <p class="fine">Claude pricing ratios: Claude Code writes its cache for an hour (2&times; fresh input), then reads it at 0.1&times;.</p>
     </div>
   </section>
 
@@ -127,7 +127,7 @@
       </div>
       <figure class="term reveal" id="term">
         <div class="term-bar"><i></i><i></i><i></i><span>~/my-project</span></div>
-        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py --since 30d">python3 tokenleak.py --since 30d</span><span class="caret" aria-hidden="true"></span></span><span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.8.2  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span><span class="ln" style="--i:1"> </span><span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output </span><span class="ln" style="--i:3">  cost split         context 93% <span class="d">(cache reads 38% · writes and uncached 55%)</span>   output 7%</span><span class="ln" style="--i:4"> </span><span class="ln" style="--i:5">  <span class="b">LEAK SCORE</span>  <span class="b y">15.8%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span><span class="ln" style="--i:6"> </span><span class="ln" style="--i:7"><span class="d">  leak            count   avoidable  of cost   fix</span></span><span class="ln" style="--i:8">  big-read           17      153.2k    13.7%   <span class="d">Locate, then read: grep -n first, then read o</span></span><span class="ln" style="--i:9">  wide-search         4       11.4k     0.9%   <span class="d">Narrow searches: scope path/type, cap results</span></span><span class="ln" style="--i:10">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span><span class="ln" style="--i:11">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span><span class="ln" style="--i:12"> </span><span class="ln" style="--i:13">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span><span class="ln" style="--i:14"> </span><span class="ln" style="--i:15">  <span class="b">top leaks</span></span><span class="ln" style="--i:16">   1    1.0%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span><span class="d"></span></span><span class="ln" style="--i:17">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span><span class="d"></span></span><span class="ln" style="--i:18">   3    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span><span class="d"></span></span><span class="ln" style="--i:19">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span><span class="d"></span></span><span class="ln" style="--i:20">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span><span class="d"></span></span></pre>
+        <pre class="term-body"><span class="cmdline"><span class="y">$</span> <span id="typed" data-text="python3 tokenleak.py baseline-runs/">python3 tokenleak.py baseline-runs/</span><span class="caret" aria-hidden="true"></span></span><span class="ln" style="--i:0"><span class="b">tokenleak</span> 1.5.1  <span class="d">·</span>  20 sessions (20 Claude Code)  <span class="d">·</span>  156 API calls  <span class="d">·</span>  since the beginning</span><span class="ln" style="--i:1"> </span><span class="ln" style="--i:2">  context processed  <span class="b">11.1M</span> tokens  <span class="d">(cache reads 10.4M · writes 757.6k · fresh 312)</span>   output 37.5k</span><span class="ln" style="--i:3">  cost split         context 93% <span class="d">(cache reads 38% · writes and uncached 55%)</span>   output 7%</span><span class="ln" style="--i:4"> </span><span class="ln" style="--i:5">  <span class="b">LEAK SCORE</span>  <span class="b y">15.8%</span>  grade <span class="b y">C</span>   <span class="d">% of token cost that was avoidable · A&lt;5 B&lt;10 C&lt;20 D&lt;30</span></span><span class="ln" style="--i:6"> </span><span class="ln" style="--i:7"><span class="d">  leak            count   avoidable  of cost   fix</span></span><span class="ln" style="--i:8">  big-read           17      153.2k    13.7%   <span class="d">Locate, then read: grep -n first, then read o</span></span><span class="ln" style="--i:9">  wide-search         4       11.4k     0.9%   <span class="d">Narrow searches: scope path/type, cap results</span></span><span class="ln" style="--i:10">  noisy-shell         4       10.0k     0.9%   <span class="d">Bound every command: quiet flags, `&gt; log; tai</span></span><span class="ln" style="--i:11">  serial-call         1           -     0.3%   <span class="d">Batch independent reads/searches in one turn</span></span><span class="ln" style="--i:12"> </span><span class="ln" style="--i:13">  <span class="b">always loaded</span>  ~43% of cost  <span class="d">52.2k tok at session start (system prompt, tools, MCP), re-se</span></span><span class="ln" style="--i:14"> </span><span class="ln" style="--i:15">  <span class="b">top leaks</span></span><span class="ln" style="--i:16">   1    1.0%  <span class="y">big-read     </span> Read ./shopcart/catalog.py                      <span class="d">11.6k tok × 10 l</span><span class="d"></span></span><span class="ln" style="--i:17">   2    1.0%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 9 la</span><span class="d"></span></span><span class="ln" style="--i:18">   3    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 8 la</span><span class="d"></span></span><span class="ln" style="--i:19">   4    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 7 la</span><span class="d"></span></span><span class="ln" style="--i:20">   5    0.9%  <span class="y">big-read     </span> Read shopcart/catalog.py                        <span class="d">11.6k tok × 6 la</span><span class="d"></span></span></pre>
         <figcaption>Real output: the audit of 20 benchmark sessions run without the rules.</figcaption>
       </figure>
     </div>
@@ -173,9 +173,9 @@
   </section>
 
   <section class="works" aria-label="Works with">
-    <p class="works-title">Works with any agent that reads skills</p>
+    <p class="works-title">Loads as an Agent Skill in these agents. Benchmarked on Claude Code only.</p>
     <div class="marquee">
-      <ul class="logos" aria-label="Compatible agents">
+      <ul class="logos" aria-label="Agents that load Agent Skills">
         <li title="Claude Code"><span class="logo l-claude" role="img" aria-label="Claude Code"></span></li>
         <li title="Cursor"><span class="logo l-cursor" role="img" aria-label="Cursor"></span></li>
         <li title="Gemini CLI"><span class="logo l-gemini" role="img" aria-label="Gemini CLI"></span></li>
@@ -219,8 +219,8 @@
         </details>
       </figure>
       <ul class="honest">
-        <li>Two batches on the same day gave &minus;40% and &minus;21%: runs vary a lot, so these are medians of 10. The rules were piloted first and adjusted once; the feature task was written beforehand and never used for tuning.</li>
-        <li>On Haiku 4.5 the rules alone changed nothing (&minus;1%): small models follow them less. The plugin&rsquo;s read guard, which stops whole reads of big files, brought it to &minus;20% (and &minus;28% with v1.5&rsquo;s outline, in a second batch). Four small tasks on a synthetic repo: run the audit on your own sessions.</li>
+        <li>Runs vary a lot, even between two batches on the same day, so these are medians of 10. The rules were piloted first and adjusted once; the feature task was written beforehand and never used for tuning.</li>
+        <li>On Haiku 4.5 the rules alone barely moved the cost: small models follow them less. Rules plus the read guard (it stops whole reads of big files): &minus;20% (guard v1.4) and &minus;28% (v1.5, with the outline) on Haiku 4.5; on Sonnet 5, &minus;23% against its own batch, not distinguishable from the rules alone (95% interval &minus;41% to +10%). 20 runs per arm each; intervals for everything in <a href="https://github.com/Pazificateur69/tokenleak/blob/main/BENCHMARK.md">BENCHMARK.md</a>. Four small tasks on a synthetic repo: run the audit on your own sessions.</li>
         <li>Every run, the exact rules used and the harness are <a href="https://github.com/Pazificateur69/tokenleak/tree/main/bench">in the repo</a>.</li>
       </ul>
     </div>
@@ -251,16 +251,18 @@
 codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
         <div class="panel" role="tabpanel" id="p-any" aria-labelledby="t-any" hidden>
-          <p>Cursor, Gemini CLI, Copilot, Windsurf, Cline and 50+ more, through the open Agent Skills format.</p>
+          <p>Cursor, Gemini CLI, Copilot, Windsurf, Cline and other agents that load the open Agent Skills format.</p>
           <div class="cmd"><pre><code>npx skills add Pazificateur69/tokenleak -g</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
         <div class="panel" role="tabpanel" id="p-md" aria-labelledby="t-md" hidden>
           <p>Always on, no install: append the rules to your instructions file.</p>
-          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/v1.9.0/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
         <div class="panel" role="tabpanel" id="p-audit" aria-labelledby="t-audit" hidden>
           <p>See your own leak score. Python 3.8+, nothing to install.</p>
-          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 30d</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
+          <div class="cmd"><pre><code>curl -fsSLO https://raw.githubusercontent.com/Pazificateur69/tokenleak/v1.9.0/skills/tokenleak/scripts/tokenleak.py
+shasum -a 256 tokenleak.py   # 983cd19a96327d13d75d9fc13bbf75f6ea67e90369dcebe4629dab96e7612b70
+python3 tokenleak.py --since 30d</code></pre><button class="copy" type="button" aria-label="Copy command"><span class="i i-copy" aria-hidden="true"></span></button></div>
         </div>
       </div>
     </div>
@@ -276,7 +278,7 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
         </details>
         <details>
           <summary>Isn't shorter output enough?</summary>
-          <p>Output is the small part of the bill in agentic coding. In the benchmark runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was 7% of the cost on Sonnet and 10 to 11% on Haiku; the rest was context. tokenleak works on what enters the context, and the audit shows the split on your own sessions.</p>
+          <p>Output is the small part of the bill in agentic coding. In the benchmark runs without tokenleak, everything the model wrote (replies, tool calls, thinking) was about 7% of the cost on Sonnet 5 and a little more on Haiku 4.5; the rest was context. tokenleak works on what enters the context, and the audit shows the split on your own sessions.</p>
         </details>
         <details>
           <summary>How accurate is the audit?</summary>
@@ -284,7 +286,7 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
         </details>
         <details>
           <summary>What saves the most on long sessions?</summary>
-          <p>When the auto-compact happens. On a 1M-token window Claude Code compacts only near the limit, so everything, the model&rsquo;s own thinking included, is re-sent on every call. The audit replays your sessions with an earlier <code>autoCompactWindow</code> and recommends a value only if it pays: on the author&rsquo;s last 30 days, <code>300000</code> came out 24% cheaper; measured live on 1M-token sessions, it cut the context re-sent by 80% and the cost by 16%, at an equal pass rate. Quality held even at the harshest setting (5/5 tasks passed through 2 to 3 compactions each).</p>
+          <p>When the auto-compact happens. On a 1M-token window Claude Code compacts only near the limit, so everything, the model&rsquo;s own thinking included, is re-sent on every call. The audit replays your sessions with an earlier <code>autoCompactWindow</code>, a native Claude Code setting, and recommends a value only if the replay says it pays (on short sessions, compacting early can cost more). Measured live on 1M-token sessions, <code>300000</code> cut the cost by 16% (95% interval &minus;36% to &minus;6%) and the context re-sent in the main session by 80%, and every run passed in both arms (4 runs per arm).</p>
         </details>
         <details>
           <summary>ccusage or tokenleak?</summary>
@@ -315,6 +317,6 @@ codex plugin add tokenleak@tokenleak</code></pre><button class="copy" type="butt
 </footer>
 
 <div class="tip" id="tip" role="status" aria-live="polite" hidden></div>
-<script src="app.js?v=18" defer></script>
+<script src="app.js?v=19" defer></script>
 </body>
 </html>

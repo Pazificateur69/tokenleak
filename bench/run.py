@@ -7,6 +7,8 @@ Each run gets a fresh copy of the fixture repo and a clean Claude Code: no user/
 CLAUDE.md, plugins, skills or MCP servers (--setting-sources project, --strict-mcp-config,
 --disable-slash-commands). The only difference between variants is --append-system-prompt-file
 with the rules, i.e. what the plugin's SessionStart hook injects.
+Competitor arms (caveman, ponytail, and each stacked on tokenleak + guard) append those skills' text, as their
+own hooks inject it, from the copies pinned under bench/competitors/.
 """
 import argparse
 import csv
@@ -68,7 +70,16 @@ TASKS["marathon-1m"] = (
     "`legacy_rate_table`? Add a line `LEGACY: <file name>` to your final reply.")
 TASKS["chain-long"] = ("Start by reading shopcart/catalog.py, tests/test_cart.py and data/orders.csv in full, and tell me "
                        "in two lines what each one holds. Then: " + TASKS["chain"])
-VARIANTS = ("baseline", "tokenleak", "guard", "compact", "compact300")  # guard = rules + the plugin's PreToolUse Read guard
+# guard = rules + the plugin's PreToolUse Read guard; tokenleak-X = guard + competitor X's rules
+VARIANTS = ("baseline", "tokenleak", "guard", "compact", "compact300",
+            "caveman", "ponytail", "tokenleak-caveman", "tokenleak-ponytail")
+# skill text only (no binaries, proxies or hooks), vendored at these commits: bench/competitors/<name>/README.md
+COMPETITORS = {
+    "caveman": {"repo": "github.com/JuliusBrussee/caveman", "sha": "2e08b9177c07bb7249a8a2d1a6758e5db281d002",
+                "path": "skills/caveman/SKILL.md"},
+    "ponytail": {"repo": "github.com/DietrichGebert/ponytail", "sha": "2961b52fc1fe6a5a87c7a959a79512e5c2f3ffe5",
+                 "path": "skills/ponytail/SKILL.md"},
+}
 SCRIPT = os.environ.get("TOKENLEAK_BENCH_SCRIPT") or os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")  # guard under test
 # Same for both variants: the agent can work in its repo (+ temp dirs) and cannot read your personal folders.
 HOME_DIRS = ["~/Desktop", "~/Documents", "~/Downloads", "~/Developer", "~/.claude", "~/.codex", "~/.ssh", "~/Library"]
@@ -77,6 +88,27 @@ SANDBOX = {
                 "filesystem": {"denyRead": HOME_DIRS, "allowWrite": ["/tmp", "/private/tmp"]}},
     "permissions": {"deny": [f"Read({d}/**)" for d in HOME_DIRS]},
 }
+
+
+def competitor(variant):
+    """caveman / tokenleak-caveman -> "caveman"; None for the other variants."""
+    c = variant.replace("tokenleak-", "", 1)
+    return c if c in COMPETITORS else None
+
+
+def competitor_rules(name):
+    """What the competitor's own SessionStart hook injects in its default mode, from the vendored SKILL.md."""
+    with open(os.path.join(HERE, "competitors", name, "SKILL.md"), encoding="utf-8") as f:
+        body = re.sub(r"\A---[\s\S]*?---\s*", "", f.read(), count=1)  # both hooks strip the frontmatter
+    if name == "caveman":  # src/hooks/caveman-activate.js buildRuleset("caveman")
+        return ("CAVEMAN MODE ACTIVE — mode: caveman\n\n" + body.rstrip()
+                + '\n\nSwitch: /caveman, /ultracave, /megacave. Off: "stop caveman" or "normal mode".')
+
+    def other_level(line):  # hooks/ponytail-instructions.js: level "full" drops lite/ultra rows and examples
+        m = re.match(r"\|\s*\*\*(.+?)\*\*\s*\||-\s*([^:]+):\s*\"", line)
+        return bool(m) and (m.group(1) or m.group(2)).strip().lower() in ("off", "lite", "ultra")
+
+    return "PONYTAIL MODE ACTIVE — level: full\n\n" + "\n".join(l for l in body.split("\n") if not other_level(l))
 
 
 def digest(paths):
@@ -232,7 +264,8 @@ def run_one(task, variant, i, args, outdir, rules):
     settings = dict(SANDBOX)
     if variant in ("compact", "compact300"):  # Claude Code's own setting: auto-compact at 100k / 300k tokens
         settings["autoCompactWindow"] = 100000 if variant == "compact" else 300000
-    if variant == "guard":
+    comp = competitor(variant)
+    if variant == "guard" or variant.startswith("tokenleak-"):
         settings["hooks"] = {"PreToolUse": [{"matcher": "Read", "hooks": [
             {"type": "command", "command": f'python3 "{SCRIPT}" guard'}]}]}
     cmd = ["claude", "-p", TASKS[task], "--model", args.model, "--output-format", "json",
@@ -241,6 +274,8 @@ def run_one(task, variant, i, args, outdir, rules):
            "--settings", json.dumps(settings)]
     if variant in ("tokenleak", "guard"):
         cmd += ["--append-system-prompt-file", rules]
+    elif comp:  # one file: written by main(), tokenleak's rules first for the stacked arms
+        cmd += ["--append-system-prompt-file", os.path.join(outdir, f"rules-{variant}.md")]
     t0 = time.time()
     try:
         # Apple's python3 caches bytecode under ~/Library/Caches, which the sandbox (rightly) denies
@@ -258,12 +293,14 @@ def run_one(task, variant, i, args, outdir, rules):
         "session_id": data.get("session_id"),
         "answer": (data.get("result") or "")[:500],
     }
+    if comp:
+        rec["competitor"] = dict(COMPETITORS[comp], name=comp)
     if data.get("session_id"):
         rec.update(transcript_metrics(data["session_id"]))
         rec["escaped"] = escaped(rec.get("transcript"), work)
     with open(os.path.join(outdir, f"{task}--{variant}--{i}.json"), "w") as f:
         json.dump(rec, f, indent=2)
-    print(f"  {task:<12} {variant:<10} #{i}  {'PASS' if rec['pass'] else 'FAIL'}  "
+    print(f"  {task:<12} {variant:<18} #{i}  {'PASS' if rec['pass'] else 'FAIL'}  "
           f"${rec['cost_usd'] or 0:.3f}  ctx {T.fmt(rec.get('context_tokens', 0))}  "
           f"calls {rec.get('api_calls', '?')}  {rec['wall_s']}s{'  ESCAPED' if rec.get('escaped') else ''}",
           flush=True)
@@ -333,11 +370,12 @@ def export(src, dest):
         rec = json.load(open(p))
         work = rec.pop("workdir", "")
         rec.pop("transcript", None)
-        rec["answer"] = rec.get("answer", "").replace(work, "<repo>")
+        if work:
+            rec["answer"] = rec.get("answer", "").replace(work, "<repo>")
         with open(os.path.join(dest, os.path.basename(p)), "w") as f:
             json.dump(rec, f, indent=2)
-    if os.path.exists(os.path.join(src, "rules.md")):
-        shutil.copy(os.path.join(src, "rules.md"), os.path.join(dest, "rules.md"))
+    for p in glob.glob(os.path.join(src, "rules*.md")):  # rules.md + the competitor arms' rules-<variant>.md
+        shutil.copy(p, os.path.join(dest, os.path.basename(p)))
     summarize(dest)
 
 
@@ -349,7 +387,7 @@ def main():
     ap.add_argument("--max-turns", type=int, default=40)
     ap.add_argument("--timeout", type=int, default=1200)
     ap.add_argument("--tasks", default=",".join(TASKS))
-    ap.add_argument("--variants", default="baseline,tokenleak", help="any of: baseline, tokenleak, guard")
+    ap.add_argument("--variants", default="baseline,tokenleak", help="any of: " + ", ".join(VARIANTS))
     ap.add_argument("--workdir", default=tempfile.gettempdir())
     ap.add_argument("--out")
     ap.add_argument("--summarize")
@@ -359,11 +397,20 @@ def main():
         return summarize(args.summarize)
     if args.export:
         return export(*args.export)
+    bad = set(args.variants.split(",")) - set(VARIANTS)  # a typo would otherwise run (and bill) as baseline
+    if bad:
+        ap.error("unknown variant(s): " + ", ".join(sorted(bad)))
     outdir = args.out or os.path.join(HERE, "results", time.strftime("%Y%m%d-%H%M%S"))
     os.makedirs(outdir, exist_ok=True)
     rules = os.path.join(outdir, "rules.md")
     with open(rules, "w") as f:
         T.print_rules(f)
+    for v in args.variants.split(","):
+        if competitor(v):
+            with open(rules) as f:
+                stacked = f.read().rstrip() + "\n\n" if v.startswith("tokenleak-") else ""
+            with open(os.path.join(outdir, f"rules-{v}.md"), "w", encoding="utf-8") as f:
+                f.write(stacked + competitor_rules(competitor(v)).rstrip() + "\n")
     jobs = [(t, v, i) for i in range(1, args.runs + 1) for t in args.tasks.split(",") for v in args.variants.split(",")]
     print(f"{len(jobs)} runs -> {outdir}", flush=True)
     with cf.ThreadPoolExecutor(args.parallel) as ex:

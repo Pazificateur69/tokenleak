@@ -2,6 +2,25 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.9.0 (2026-10-13)
+After an outside review against the biggest tools in this space: lead with what tokenleak itself does, put an interval on every number, make it reproducible by someone else.
+
+### Changed
+- README opens with one claim about tokenleak itself: its rules cut cost 32% on Sonnet 5 (40 runs per arm, 95% CI −42% to −20%; −19% without the task that gained most). `autoCompactWindow` is presented as what it is, a native Claude Code setting the audit tells you when to use.
+- **BENCHMARK.md**: every comparison with n, pass counts and a 95% bootstrap interval (`bench/stats.py`, reproducible seed, `--selftest`), the results that went against tokenleak, and what the transcript shows for the compaction run that peaked at 656k: one response issued all 36 reads at once, the first compaction only shaved the context (346k → 293k by Claude Code's own count), and a second one brought it down to 14k.
+- The curl one-liners (README, French README, site) are pinned to the release tag with the script's SHA-256; a test fails if a pin and `__version__` drift apart.
+
+### Corrected
+- Sonnet fix-test −6% (was −5%, from rounded medians); rules + guard on Sonnet −23% against its own batch, with an interval that crosses zero (−41% to +10%), so not distinguishable from the rules alone; chain-long context −44% (was −45%); compactions took 20 to 48 s on Haiku (median 30 s) and 54 and 89 s for the two of one Sonnet 1M run (was "about 20 to 30 s"); the −80% context figure counts the main session only (−78% with the subagents), so the site now leads with the −16% cost.
+- Site calculator: the first later call was counted as both a cache write and a read, and the write was priced at 1.25x where Claude Code writes a 1-hour cache (2x); every committed run confirms the 1-hour cache.
+- The documented rerun command ran all 8 tasks (120 runs, including ~$5 runs), not 60: it now passes `--tasks`.
+- `bench/run.py --export` of an already exported folder spliced `<repo>` between every character of the answers.
+
+### New
+- Competitor arms in the harness, skills only and not run yet: `caveman`, `ponytail`, and both stacked with tokenleak. Their rules are vendored at pinned commits with their licenses (Apache-2.0, MIT) and injected as their own SessionStart hooks do, with one omission: ponytail's hook also appends a codebase map built from the working folder (on by default), which the harness leaves out because building it means running ponytail's code.
+- PyPI-ready packaging (the name is free) and a Trusted Publishing workflow that stays off until the PyPI side exists (steps in CONTRIBUTING.md). README links are absolute so the PyPI page renders.
+- REPRODUCE.md (rerun the benchmark, measure your own sessions with `--compare`), issue forms for reruns and before/after results, CONTRIBUTING.md with a feature freeze until 2026-11-10.
+
 ## 1.8.2 (2026-10-13)
 ### Benchmark, corrected with more runs
 - The 1M-regime A/B now has 4 runs per arm (two batches). Pooled: context re-sent −80%, cost **−16%** (not the −26% of the first 2 runs), 4/4 passed in both arms, slower (315 s vs 245 s median). First batch −26% (Sonnet delegated the bulk read to a subagent), second batch −11% (it read everything itself and compacted 2 to 3 times). README, site and repo description now show the pooled numbers.

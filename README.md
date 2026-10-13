@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/logo.png" width="96" alt="tokenleak logo"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/logo.png" width="96" alt="tokenleak logo"></p>
 
 <h1 align="center">tokenleak</h1>
 
@@ -13,17 +13,19 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 </p>
 
 <p align="center">
-<a href="https://pazificateur69.github.io/tokenleak/">Website</a> · <a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="README.fr.md">Français</a>
+<a href="https://pazificateur69.github.io/tokenleak/">Website</a> · <a href="#install">Install</a> · <a href="#the-audit">Audit</a> · <a href="#benchmark">Benchmark</a> · <a href="#the-rules">Rules</a> · <a href="https://github.com/Pazificateur69/tokenleak/blob/main/README.fr.md">Français</a>
 </p>
 
-<p align="center"><img src="assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
-**−80% context tokens and −16% cost on 1M-token sessions, measured live, same pass rate**: one Claude Code setting the audit finds for you ([details](#long-sessions-the-setting-that-matters-most)). **−32% cost over 80 A/B runs on Sonnet 5 with the rules** (40/40 passed both ways); −20% to −28% on Haiku 4.5 with the read guard ([benchmark](#benchmark)).
+**tokenleak's rules cut Claude Code's cost by 32% on Sonnet 5** (40 runs per arm, 95% CI −42% to −20%, 40/40 passed in both arms; −19% without the task that gained most). Small, synthetic tasks: [BENCHMARK.md](https://github.com/Pazificateur69/tokenleak/blob/main/BENCHMARK.md) has every number with its interval, including the ones that went the other way.
 
-**Try it first, nothing to install:** see where your own tokens went in ten seconds (Python 3.8+, reads your local transcripts, sends nothing).
+**Try it first, nothing to install:** see where your own tokens went (Python 3.8+, stdlib only, reads your local transcripts, sends nothing). The script is pinned to a release; check its hash before running it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 7d
+curl -fsSLO https://raw.githubusercontent.com/Pazificateur69/tokenleak/v1.9.0/skills/tokenleak/scripts/tokenleak.py
+shasum -a 256 tokenleak.py   # 983cd19a96327d13d75d9fc13bbf75f6ea67e90369dcebe4629dab96e7612b70
+python3 tokenleak.py --since 7d
 ```
 
 ## Why
@@ -39,20 +41,20 @@ tokenleak does two things:
 
 ## Long sessions: the setting that matters most
 
-On a 1M-token context window, Claude Code auto-compacts only near the limit. Until then everything stays in context and is re-sent on every call: file reads, logs, and the model's own output. That last part is easy to miss: after a call that writes a lot, the next call's context grows by about as much (1.04x, measured over 1,977 such calls), so thinking, replies and tool calls are re-sent too. In the author's last 30 days of sessions, they were 42% of everything re-sent, about twice all tool results together (20%), and 65% of calls carried more than 200k tokens of context.
+On a 1M-token context window, Claude Code auto-compacts only near the limit. Until then everything stays in context and is re-sent on every call: file reads, logs, and the model's own output. That last part is easy to miss: after a call that writes a lot, the next call's context grows by about as much (1.04x, measured over 1,977 such calls in the author's sessions), so thinking, replies and tool calls are re-sent too. In the author's last 30 days of sessions, they were 42% of everything re-sent, about twice all tool results together (20%), and 65% of calls carried more than 200k tokens of context.
 
-Claude Code has a setting for exactly this, `autoCompactWindow`. The audit replays your own sessions with an earlier auto-compact and tells you what it would have saved:
+Claude Code has a native setting for exactly this, `autoCompactWindow`; tokenleak doesn't change how compaction works, it tells you whether and where to set it. The audit replays your own sessions with an earlier auto-compact and tells you what it would have saved. On the author's last 30 days:
 
 ```
   context window  65% of calls carried over 200k tokens of context (max 998.0k)
   replayed on these sessions: "autoCompactWindow": 300000 → -24% cost (109 more compactions)
 ```
 
-- **Measured live in the 1M regime.** Sonnet 5 with the 1M window, 4 runs per arm in two batches: read 36 large legacy modules, then seven tasks, then a question that needs what was read first. Default: context up to 757k, $5.40 median. With `autoCompactWindow` 300000: context re-sent **−80%** (12.4M → 2.5M tokens), **$4.55 median (−16%)**, 4/4 passed in both arms, slower (315 s vs 245 s median). By batch: −26% when Sonnet handed the bulk read to a subagent (first batch, both runs), −11% when it read everything itself and compacted 2 to 3 times (second batch). These sessions are ~20 calls long, so compactions weigh a lot; the hundreds of calls of a real 1M session are what the replay prices. [Runs](bench/results/2026-10-13-sonnet-5-1m-compaction).
-- **Measured live, and it only pays on long sessions.** A session that jumps past 100k early (read three big files, then the four benchmark tasks; Haiku 4.5, 4 runs per arm): one compaction cut the context re-sent by 45% (2.1M → 1.2M tokens), 4/4 passed in both arms, cost even (+2%). Sessions that stay under ~90k (seven tasks in ~28 calls, 3 runs per arm): two compactions, 3/3 passed, but +26% cost. On the hundreds of calls of a long 1M session the saving is what the replay computes; on short ones it is a loss, and the replay says so.
-- **Calibrated on those runs, and it errs against compacting.** The replay charges every extra compaction its summary call (the whole context read uncached, 4k written), 15k of fresh summary and kept turns, and 10k of re-reads. On the three measured series it predicted +60% (real +59%), +46% (real +2%) and +36% (real +26%).
-- **Quality held under the harshest setting.** `autoCompactWindow` at 100k, the lowest Claude Code accepts, with 1 to 3 compactions mid-task: 12/12 Haiku 4.5 runs and 3/3 Sonnet 5 runs passed every check, as did every run without it. Runs: [Haiku](bench/results/2026-10-13-haiku-4.5-compaction), [Sonnet](bench/results/2026-10-13-sonnet-5-compaction).
-- **It is not free on short sessions.** In that same test compacting cost +59% and doubled the wall time: each compaction takes about 20 to 30 s, and its summary call never shows up in the transcript. So the audit only recommends a value when your own sessions say it pays (5% or more), and picks the largest one within 2 points of the best, to compact as rarely as possible.
+- **Measured live in the 1M regime.** Sonnet 5 with the 1M window, 4 runs per arm in two batches: read 36 large legacy modules, then seven tasks, then a question that needs what was read first. Default: context up to 757k, $5.40 median. With `autoCompactWindow` 300000: **$4.55 median (−16%, 95% CI −36% to −6%)**, context re-sent in the main session −80% (12.4M → 2.5M tokens; −78% counting the first batch's subagents), 4/4 passed in both arms, slower (315 s vs 245 s median). By batch: −26% when Sonnet handed the bulk read to a subagent (first batch, both runs), −11% when it read everything itself and compacted 2 to 3 times (second batch). These sessions are ~20 calls long, so compactions weigh a lot; the hundreds of calls of a real 1M session are what the replay prices. [Runs](https://github.com/Pazificateur69/tokenleak/blob/main/bench/results/2026-10-13-sonnet-5-1m-compaction).
+- **Measured live, and it only pays on long sessions.** A session that jumps past 100k early (read three big files, then the four benchmark tasks; Haiku 4.5, 4 runs per arm): one compaction cut the context re-sent by 44% (2.1M → 1.2M tokens), 4/4 passed in both arms, cost even (+2%). Sessions that stay under ~90k (seven tasks in ~28 calls, 3 runs per arm): two compactions, 3/3 passed, but +26% cost. On the hundreds of calls of a long 1M session the saving is what the replay computes; on short ones it is a loss, and the replay says so.
+- **Calibrated on those runs; it matches or errs against compacting.** The replay charges every extra compaction its summary call (the whole context read uncached, 4k written), 15k of fresh summary and kept turns, and 10k of re-reads. On the three measured series it predicted +58% (real +59%), +41% (real +2%) and +36% (real +26%); the transcripts it ran on are local, not published.
+- **Quality held under the harshest setting.** `autoCompactWindow` at 100k, the lowest Claude Code accepts, with 1 to 3 compactions mid-task: 12/12 Haiku 4.5 runs and 3/3 Sonnet 5 runs passed every check, as did every run without it. Runs: [Haiku](https://github.com/Pazificateur69/tokenleak/blob/main/bench/results/2026-10-13-haiku-4.5-compaction), [Sonnet](https://github.com/Pazificateur69/tokenleak/blob/main/bench/results/2026-10-13-sonnet-5-compaction).
+- **It is not free on short sessions.** On the short `chain` task compacting cost +59% and doubled the wall time: compactions took 20 to 48 s on Haiku (median 30 s over 23 compactions, read from the transcripts) and 54 and 89 s for the two of one Sonnet 1M run, and its summary call never shows up in the transcript. So the audit only recommends a value when your own sessions say it pays (5% or more), and picks the largest one within 2 points of the best, to compact as rarely as possible.
 
 A plugin can't turn it on for you: Claude Code only lets a plugin ship the `agent` and `subagentStatusLine` settings. So tokenleak tells you (the audit, and a weekly note at session start when your sessions show a gain of 10% or more) and applies it only when you ask. `tokenleak compact` prints the full replay table for your sessions; `tokenleak compact --apply` writes the recommended value to `~/.claude/settings.json` (with a backup). Or set it yourself with `/config` → Auto-compact window.
 
@@ -83,21 +85,25 @@ npx skills add Pazificateur69/tokenleak -g
 **Always on, any agent, no install.** Append the rules to your instructions file (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursorrules`…):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md
+curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/v1.9.0/skills/tokenleak/SKILL.md | awk '/^## Audit/{exit} f>=2; /^---$/{f++}' >> AGENTS.md
 ```
 
 ## The audit
 
 ```bash
 # no install: Python 3.8+, stdlib only, reads ~/.claude/projects and ~/.codex/sessions
-curl -fsSL https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/skills/tokenleak/scripts/tokenleak.py | python3 - --since 30d
+curl -fsSLO https://raw.githubusercontent.com/Pazificateur69/tokenleak/v1.9.0/skills/tokenleak/scripts/tokenleak.py
+shasum -a 256 tokenleak.py   # 983cd19a96327d13d75d9fc13bbf75f6ea67e90369dcebe4629dab96e7612b70
+python3 tokenleak.py --since 30d
 ```
 
 The report starts with where the money went (`cost split`: context, read from the cache or written to it, versus output), then every leak priced by its estimated context tax.
 
 Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak tokenleak` (or `pipx install git+https://github.com/Pazificateur69/tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
 
-<p align="center"><img src="assets/demo.svg" alt="tokenleak audit output: leak score, leak kinds with the rule that fixes each, top leaks" width="900"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/demo.svg" alt="tokenleak audit output: leak score, leak kinds with the rule that fixes each, top leaks" width="900"></p>
+
+*The screenshot is the audit of 20 benchmark runs without the rules.*
 
 | flag | |
 |---|---|
@@ -168,47 +174,35 @@ It also shows what's **always loaded**: your `CLAUDE.md` / `AGENTS.md` / memory 
 
 ### How it's computed
 
-For each tool result: **context tax = avoidable tokens × (cache write + every later call in the same context × cache read)**, using each provider's relative prices (Claude: cache read 0.1×, cache write 1.25–2×, output 5×; Codex/GPT-5: cached 0.1×, output 8×). *Avoidable* is an estimate: only the part above a sane budget counts (e.g. a 6k-token read counts as 4k avoidable), the full size only for exact repeats. The audit can't know whether a big read was truly needed, so treat each finding as a suspect, not a verdict, and judge the trend with `--compare`. The **leak score** is the share of your total token cost that this estimate calls avoidable. Dollar amounts come from Claude Code's own per-session cost (prorated when a session started before the `--since` window), never from a price table we maintain.
+For each tool result: **context tax = avoidable tokens × (cache write + every later call after that × cache read)**, using each provider's relative prices (Claude: cache read 0.1×, cache write 1.25–2×, output 5×; Codex/GPT-5: cached 0.1×, output 8×). *Avoidable* is an estimate: only the part above a sane budget counts (e.g. a 6k-token read counts as 4k avoidable), the full size only for exact repeats. The audit can't know whether a big read was truly needed, so treat each finding as a suspect, not a verdict, and judge the trend with `--compare`. The **leak score** is the share of your total token cost that this estimate calls avoidable. Dollar amounts come from Claude Code's own per-session cost (prorated when a session started before the `--since` window), never from a price table we maintain.
 
-Everything stays on your machine: no network, no telemetry, ~1,500 lines of stdlib Python you can read in ten minutes.
+Everything stays on your machine: no network, no telemetry, ~1,700 lines of stdlib Python you can read in ten minutes.
 
 ## Benchmark
 
-A/B tests in Claude Code (`claude -p`): same prompt, a fresh copy of the same small repo for every run. The **only** difference is what tokenleak adds: the rules in the system prompt (what the plugin injects), and in the `guard` arm the plugin's read guard too. Every run is checked by a script: tests green, build passing, exact answer, feature working.
+A/B tests in Claude Code (`claude -p`): same prompt, a fresh copy of the same small repo for every run, every run checked by a script (tests green, build passing, exact answer, feature working) and published with the exact rules and its token usage by type. Cost is the median API-equivalent cost per run, summed over tasks; intervals are 95% bootstrap intervals over runs (`bench/stats.py`), optimistic with 4 to 10 runs per arm.
 
-**Sonnet 5**, 10 runs per task and arm (two batches, 80 runs):
-
-| task | without | with the rules | change | passed |
-|---|---|---|---|---|
-| fix a failing test (chatty test logs) | $0.148 | $0.140 | −5% | 10/10 · 10/10 |
-| answer a question about data in a big module | $0.205 | $0.160 | **−22%** | 10/10 · 10/10 |
-| fix a build buried in 600 lines of output | $0.270 | $0.206 | **−24%** | 10/10 · 10/10 |
-| add a feature *(held out, see below)* | $0.450 | $0.222 | **−51%** | 10/10 · 10/10 |
-| **total** | **$1.07** | **$0.73** | **−32%** | **40/40 · 40/40** |
-
-**Haiku 4.5**, 5 runs per task and arm, two batches (120 runs):
-
-| batch | without | rules only | rules + read guard (v1.4) | rules + read guard with outline (v1.5) | passed |
+| what | model | runs per arm | cost | 95% CI | passed |
 |---|---|---|---|---|---|
-| 1 | $0.513 | $0.505 (−1%) | **$0.408 (−20%)** | | 60/60 |
-| 2 | $0.530 | | **$0.396 (−25%)** | **$0.379 (−28%)** | 60/60 |
-
-Medians of the API-equivalent cost per run, as reported by Claude Code. On Sonnet, context tokens −17% and output tokens −11%. The screenshot under [The audit](#the-audit) is the audit of 20 runs *without* the rules.
+| tokenleak rules | Sonnet 5 | 40 | **−32%** | −42% to −20% | 40/40 · 40/40 |
+| same, without the task that gained most (add-feature) | Sonnet 5 | 30 | −19% | −36% to −14% | 30/30 · 30/30 |
+| rules + read guard, against its own batch's baseline | Sonnet 5 | 20 | −23% | −41% to +10% | 20/20 · 20/20 |
+| rules alone | Haiku 4.5 | 20 | −1% | −20% to +21% | 20/20 · 20/20 |
+| rules + read guard (v1.4) | Haiku 4.5 | 20 | −20% | −31% to −4% | 20/20 · 20/20 |
+| rules + read guard with outline (v1.5) | Haiku 4.5 | 20 | −28% | −35% to −13% | 20/20 · 20/20 |
+| `autoCompactWindow` 300000 (a native Claude Code setting), 1M sessions | Sonnet 5 | 4 | −16% | −36% to −6% | 4/4 · 4/4 |
 
 **Read it honestly.**
-- **Runs vary a lot.** The first Sonnet batch gave −40%, a second batch the same day −21%; the table pools both. Single runs swing by 2 to 4x, so read these as ranges, and run the audit on your own sessions before and after.
-- **Haiku 4.5 didn't follow the rules on its own** (one small model, four tasks). The rules alone changed nothing; the read guard (which stops whole reads of big files) brought −20% to −28%. On Sonnet, rules + guard did as well as the rules alone in the same batch (−22% vs −21%). That's why the plugin ships with the guard on.
-- **The outline is a small gain, not a big one.** In batch 2 both guards ran side by side: −28% with the outline, −25% without, mostly on the data question (9 API calls instead of 12, $0.077 vs $0.086). Within the noise of 5 runs; it ships because it removes a search round-trip when the agent knows what it's looking for.
-- **One task was re-run.** In Haiku batch 2, `fix-build` first failed in every arm alike (3/5 each) because the sandbox blocked Apple's Python bytecode cache in `~/Library`. The harness now points that cache inside the run's folder, and the 15 `fix-build` runs were redone for all three arms; the table uses the redone runs.
-- **Speed is mixed.** A refused read costs a round-trip. Median wall time per run: on Sonnet 35 s without, 31 s with the rules, 38 s with rules + guard; on Haiku, batch 1 went from 27 s to 37 s with the guard, batch 2 from 32 s to 29 s.
-- **Tuning was kept apart from testing.** The rules were piloted first (v1, 30 runs: −23%) and changed once: one new rule (compute, don't read data) and two additions (check a file's size first; chain shell steps). The `add-feature` task was written before that change and never used to tune them: it shows the biggest gain.
-- Four small tasks on a synthetic repo built to contain what leaks in real ones (a big data module, chatty logs, a noisy build). Runs are isolated from your settings, CLAUDE.md, plugins and MCP servers (`--setting-sources project --strict-mcp-config`) and sandboxed away from your personal folders.
+- Four small tasks on a synthetic repo the author wrote to contain what leaks in real ones; single runs swing up to 4x. The first Sonnet batch said −40%, the second −21%; the table pools both.
+- Haiku 4.5 didn't follow the rules on its own; the read guard (code, not prompt) is what helped. On Sonnet the guard added nothing measurable over the rules.
+- The `add-feature` task was written before the rules were tuned and never used to tune them. It also gains the most, which is why the table shows the total without it.
+- Compaction pays only on long sessions: on short ones it cost +2% to +59% in the same harness ([BENCHMARK.md](https://github.com/Pazificateur69/tokenleak/blob/main/BENCHMARK.md#the-auto-compact-window)).
 
-Every run, with the exact rules used and its token usage by type (so the cost split can be rebuilt), is in [bench/results](bench/results). In October 2026 the `add-feature` checker was made stricter (a second category, and the default report unchanged); all 55 published `add-feature` runs were re-checked against it and still pass. Reproduce: `python3 bench/run.py --runs 5 --variants baseline,tokenleak,guard` (60 runs, about $13 of API-equivalent usage on Sonnet).
+Everything, with per-task tables, the losing results and how each number is computed: [BENCHMARK.md](https://github.com/Pazificateur69/tokenleak/blob/main/BENCHMARK.md). To rerun it or measure your own sessions before and after: [REPRODUCE.md](https://github.com/Pazificateur69/tokenleak/blob/main/REPRODUCE.md).
 
 ## The rules
 
-The full skill is [skills/tokenleak/SKILL.md](skills/tokenleak/SKILL.md). In short:
+The full skill is [skills/tokenleak/SKILL.md](https://github.com/Pazificateur69/tokenleak/blob/main/skills/tokenleak/SKILL.md). In short:
 
 1. **Locate, then read.** Check the size, `grep -n`, then read only that range.
 2. **Compute, don't read.** Questions about data get a one-liner that prints the answer, not the data.
@@ -233,7 +227,7 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 **What about rtk, caveman and the rest?** Complementary. rtk compresses command output at the shell level; output-style skills shorten replies. tokenleak changes *what the agent asks for* and measures the result on your real transcripts. Run the audit before and after anything you install.
 
-**What do the rules cost?** About 770 tokens, re-sent on every call from the cache: over a 60-call session, about as much as 5.5k tokens of fresh input. Keeping one 6k-token test log down to 800 tokens at call 5 of that session saves about six times that.
+**What do the rules cost?** About 770 tokens, re-sent on every call from the cache: over a 60-call session, about as much as 6.1k tokens of fresh input (Claude Code writes its cache for an hour, at 2x). Keeping one 6k-token test log down to 800 tokens at call 5 of that session saves about six times that.
 
 **Limitations.** Token sizes of individual results are estimated (~4 chars/token); session token totals come from the usage the transcripts record, and dollars only from the sessions that record a cost. "Avoidable" is an estimate, not a measurement. `serial-call` is a heuristic (it only flags a call whose target was already known and isn't mentioned in the previous result). Codex transcript formats change between versions; Claude Code is the best-tested path.
 
@@ -243,6 +237,4 @@ And never save tokens by truncating away the real error, guessing file contents,
 
 ## Contributing
 
-Issues and PRs welcome, especially transcript formats from other agents (Gemini CLI, Cursor, OpenCode) and new leak detectors. Tests: `python3 -m unittest discover -s tests`. Benchmark: `python3 bench/run.py --runs 5`.
-
-MIT License.
+Feature freeze until 2026-11-10: fixes, measurements and docs only. Reruns of the benchmark and before/after numbers from your own sessions are the most useful contributions right now: [REPRODUCE.md](https://github.com/Pazificateur69/tokenleak/blob/main/REPRODUCE.md), [CONTRIBUTING.md](https://github.com/Pazificateur69/tokenleak/blob/main/CONTRIBUTING.md). Tests: `python3 -m unittest discover -s tests`.

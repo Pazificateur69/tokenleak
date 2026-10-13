@@ -174,7 +174,8 @@ document.querySelectorAll(".spot").forEach((c) => {
   });
 });
 
-// Context tax calculator. Claude ratios: cache write 1.25x, cache read 0.1x of fresh input.
+// Context tax calculator. Claude Code writes its cache with a 1-hour lifetime: write 2x, read 0.1x of fresh input.
+// later >= 1: the "at" slider stops at len - 1.
 const calls = $("calls");
 function renderTax() {
   const size = +$("size").value, len = +$("len").value;
@@ -186,7 +187,8 @@ function renderTax() {
   $("o-at").textContent = at;
   $("o-len").textContent = len;
   $("r-times").textContent = later;
-  $("r-equiv").textContent = (1.25 + 0.1 * later).toFixed(2);
+  // the first later call writes it to the cache, only the rest read it (same model as the audit)
+  $("r-equiv").textContent = (2 + 0.1 * (later - 1)).toFixed(2);
   $("r-save").textContent = size > 800 ? `${Math.round(100 * (size - 800) / size)}%` : "0%";
   if (calls.children.length !== len) calls.replaceChildren(...Array.from({ length: len }, () => document.createElement("i")));
   [...calls.children].forEach((c, i) => { c.className = i + 1 === at ? "at" : i + 1 > at ? "re" : ""; });
@@ -196,10 +198,10 @@ renderTax();
 
 // Benchmark: cost per run (USD, as reported by Claude Code), Sonnet 5, 10 runs per arm in two batches. Source: bench/results/2026-10-12-sonnet-5
 const BENCH = [
-  { task: "Fix a failing test", note: "chatty test logs", base: [0.126, 0.129, 0.14, 0.142, 0.143, 0.153, 0.154, 0.157, 0.159, 0.525], lean: [0.124, 0.13, 0.131, 0.137, 0.14, 0.14, 0.141, 0.15, 0.156, 0.157] },
-  { task: "Answer a data question", note: "big data module", base: [0.096, 0.201, 0.202, 0.205, 0.205, 0.206, 0.208, 0.211, 0.22, 0.387], lean: [0.146, 0.148, 0.149, 0.151, 0.16, 0.16, 0.163, 0.167, 0.169, 0.183] },
-  { task: "Fix a noisy build", note: "600 lines of output", base: [0.219, 0.252, 0.261, 0.266, 0.267, 0.272, 0.29, 0.416, 0.446, 0.579], lean: [0.144, 0.153, 0.159, 0.16, 0.194, 0.218, 0.221, 0.232, 0.232, 0.234] },
-  { task: "Add a feature", note: "held out from tuning", base: [0.288, 0.298, 0.299, 0.421, 0.44, 0.459, 0.464, 0.466, 0.482, 0.492], lean: [0.164, 0.172, 0.184, 0.195, 0.219, 0.225, 0.266, 0.333, 0.337, 0.375] },
+  { task: "Fix a failing test", note: "chatty test logs", base: [0.1258, 0.1286, 0.1404, 0.1425, 0.1431, 0.1532, 0.1541, 0.1567, 0.1591, 0.5251], lean: [0.1236, 0.1302, 0.1309, 0.1367, 0.1395, 0.1397, 0.1407, 0.1499, 0.1564, 0.1569] },
+  { task: "Answer a data question", note: "big data module", base: [0.0962, 0.2006, 0.2019, 0.2047, 0.2049, 0.2058, 0.2076, 0.2113, 0.2204, 0.3868], lean: [0.1465, 0.1484, 0.1494, 0.1511, 0.1596, 0.1599, 0.1625, 0.1671, 0.1695, 0.1831] },
+  { task: "Fix a noisy build", note: "600 lines of output", base: [0.2191, 0.2519, 0.2605, 0.2656, 0.2666, 0.2724, 0.2899, 0.4162, 0.4456, 0.5789], lean: [0.1437, 0.1532, 0.1591, 0.16, 0.1942, 0.2176, 0.2213, 0.2316, 0.2319, 0.2343] },
+  { task: "Add a feature", note: "held out from tuning", base: [0.2879, 0.2983, 0.2988, 0.4211, 0.4403, 0.4591, 0.4645, 0.4665, 0.4822, 0.4923], lean: [0.1636, 0.1722, 0.1845, 0.1949, 0.2191, 0.2247, 0.2662, 0.3329, 0.3373, 0.3748] },
 ];
 const median = (a) => {
   const s = [...a].sort((x, y) => x - y), m = Math.floor(s.length / 2);

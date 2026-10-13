@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.8.2"
+__version__ = "1.9.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -1610,7 +1610,7 @@ def print_rules(out=None):
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except OSError:  # installed as a bare CLI (uvx/pipx): the rules live in the skill
-        out.write(f"The rules ship with the skill: {REPO}/blob/main/skills/tokenleak/SKILL.md\n")
+        out.write(f"The rules ship with the skill: {REPO}/blob/v{__version__}/skills/tokenleak/SKILL.md\n")
         return
     parts = text.split("\n---\n", 1)
     body = parts[1].lstrip() if text.startswith("---") and len(parts) == 2 else text

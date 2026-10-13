@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]  # SPDX license string; building needs Python 3.9+, the wheel runs on 3.8
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,15 +7,29 @@ name = "tokenleak"
 dynamic = ["version"]
 description = "Find and plug your coding agent's token leaks: audit Claude Code and Codex transcripts locally."
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.8"
 authors = [{ name = "Pazificateur69" }]
 keywords = ["claude-code", "codex", "tokens", "llm", "agents", "cost"]
-classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Environment :: Console"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
 
 [project.urls]
 Homepage = "https://pazificateur69.github.io/tokenleak/"
 Repository = "https://github.com/Pazificateur69/tokenleak"
+Issues = "https://github.com/Pazificateur69/tokenleak/issues"
+Changelog = "https://github.com/Pazificateur69/tokenleak/blob/main/CHANGELOG.md"
 
 [project.scripts]
 tokenleak = "tokenleak:main"

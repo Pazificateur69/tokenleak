@@ -543,6 +543,8 @@ class TokenleakTest(unittest.TestCase):
         self.assertEqual(len(T.fit("plugin_engineering_github:create_file src/app/very/long/path.ts", 30)), 30)
         self.assertEqual(T.fit("Bash npm test -- --verbose --coverage", 20), "Bash npm test -- --…")
 
+    @unittest.skipUnless(os.path.exists(os.path.join(os.path.dirname(__file__), "..", "skills", "tokenleak", "SKILL.md")),
+                         "not in the sdist")
     def test_rules_print_skill_body(self):
         buf = io.StringIO()
         with redirect_stdout(buf):

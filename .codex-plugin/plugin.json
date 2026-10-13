@@ -1,6 +1,6 @@
 {
   "name": "tokenleak",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "Stop paying the context tax: token-lean rules for your agent and its subagents, plus an audit that finds where your tokens leak.",
   "author": {
     "name": "Pazificateur69",
