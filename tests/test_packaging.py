@@ -31,8 +31,9 @@ class Packaging(unittest.TestCase):
             T.print_rules(out)
         self.assertIn("/blob/v%s/skills/tokenleak/SKILL.md" % T.__version__, out.getvalue())
 
-    @unittest.skipUnless(os.path.exists(os.path.join(ROOT, "README.md")) and
-                         os.path.exists(os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")), "not in the sdist")
+    @unittest.skipUnless(all(os.path.exists(os.path.join(ROOT, *p)) for p in (
+        ("README.md",), ("README.fr.md",), ("docs", "index.html"), ("skills", "tokenleak", "scripts", "tokenleak.py"))),
+        "not in the sdist")
     def test_readme_pins_this_release_and_its_hash(self):
         import hashlib
         readme = read("README.md") + read("README.fr.md") + read("docs", "index.html")
