@@ -18,9 +18,7 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 
 <p align="center"><img src="assets/stack.svg" alt="Animation: a 12k-token test log read at call 3 is re-sent by every later call (252,000 tokens); with tokenleak it is bounded to 800 tokens (16,800)." width="900"></p>
 
-**−32% cost over 80 A/B runs on Sonnet 5 with the rules, same pass rate (40/40). −20% to −28% on Haiku 4.5 with the read guard (two batches, 120 runs).** [Details](#benchmark).
-
-**On 1M-token sessions, one Claude Code setting measured live: −26% cost, −77% context re-sent, same pass rate** (`autoCompactWindow` 300000; [details](#long-sessions-the-setting-that-matters-most)).
+**−77% context tokens and −26% cost on 1M-token sessions, measured live, same pass rate**: one Claude Code setting the audit finds for you ([details](#long-sessions-the-setting-that-matters-most)). **−32% cost over 80 A/B runs on Sonnet 5 with the rules** (40/40 passed both ways); −20% to −28% on Haiku 4.5 with the read guard ([benchmark](#benchmark)).
 
 **Try it first, nothing to install:** see where your own tokens went in ten seconds (Python 3.8+, reads your local transcripts, sends nothing).
 
