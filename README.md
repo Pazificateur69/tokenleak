@@ -8,6 +8,7 @@ Not leaked API keys: the tokens your AI agent burns on context it didn't need.</
 <p align="center">
 <a href="https://github.com/Pazificateur69/tokenleak/actions/workflows/test.yml"><img src="https://github.com/Pazificateur69/tokenleak/actions/workflows/test.yml/badge.svg" alt="tests"></a>
 <a href="https://www.skillsdirectory.com/skills/pazificateur69-tokenleak"><img src="https://www.skillsdirectory.com/api/skills/pazificateur69-tokenleak/badge" alt="Security: A on Skills Directory"></a>
+<a href="https://pypi.org/project/tokenleak/"><img src="https://img.shields.io/pypi/v/tokenleak" alt="PyPI"></a>
 <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="zero dependencies">
 <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license">
 </p>
@@ -99,7 +100,7 @@ python3 tokenleak.py --since 30d
 
 The report starts with where the money went (`cost split`: context, read from the cache or written to it, versus output), then every leak priced by its estimated context tax.
 
-Or install the CLI: `uvx --from git+https://github.com/Pazificateur69/tokenleak tokenleak` (or `pipx install git+https://github.com/Pazificateur69/tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
+Or install the CLI from [PyPI](https://pypi.org/project/tokenleak/): `uvx tokenleak` (or `pipx install tokenleak`, or `pip install tokenleak`), or run it from a clone: `python3 skills/tokenleak/scripts/tokenleak.py`. Or just ask your agent: *"audit my token leaks"*.
 
 <p align="center"><img src="https://raw.githubusercontent.com/Pazificateur69/tokenleak/main/assets/demo.svg" alt="tokenleak audit output: leak score, leak kinds with the rule that fixes each, top leaks" width="900"></p>
 

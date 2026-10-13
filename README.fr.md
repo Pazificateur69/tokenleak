@@ -53,6 +53,8 @@ shasum -a 256 tokenleak.py   # 983cd19a96327d13d75d9fc13bbf75f6ea67e90369dcebe46
 python3 tokenleak.py --since 30d
 ```
 
+Ou installez la CLI depuis [PyPI](https://pypi.org/project/tokenleak/) : `pipx install tokenleak` (ou `uvx tokenleak`).
+
 Options : `--since 7d|30d|all`, `--here` (ce dossier), `--current` (dernière session), `--json`, `--share` (carte anonymisée à partager), `--redact` (masque commandes, chemins et projets). Ou demande simplement à ton agent : *« audite mes fuites de tokens »*.
 
 Tout reste sur ta machine : aucun accès réseau, aucune télémétrie.
