@@ -20,7 +20,7 @@ import tempfile
 import time
 from datetime import datetime
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 REPO = "https://github.com/Pazificateur69/tokenleak"
 
 CHARS_PER_TOKEN = 4.0  # transcripts don't store per-result token counts; ~4 chars/token for code + English
@@ -750,16 +750,17 @@ COMPACT_FIRES_BELOW = 30_000  # measured: auto-compact fires ~30k tokens under t
 def compact_whatif(threads, setting):
     """-> (cost units saved, compactions added) had Claude Code auto-compacted at `setting` (autoCompactWindow).
 
-    Replays each main session's recorded context sizes. Every compaction is charged on the harsh side: its summary
-    call reads the whole context uncached, writes a 4k summary, the session restarts at its start context plus 20k
-    (summary and kept turns) and spends another 20k re-reading what it lost.
+    Replays each main session's recorded context sizes. Every compaction is charged: its summary call reads the whole
+    context uncached and writes 4k tokens, the session restarts at its start context plus 15k (summary and kept turns,
+    newly cached) and spends 10k re-reading what it lost. Calibrated on measured runs (bench/results, 2026-10-13): it
+    matched a short series (+60% predicted, +59% measured) and overstated the cost on a longer one (+46% vs +2%).
     """
     fire, saved, added = setting - COMPACT_FIRES_BELOW, 0.0, 0
     for t in threads:
         if t.agent != "claude" or t.subagent or not t.calls:
             continue
         w = weights(t)
-        new = (t.start_ctx or t.calls[0].ctx_in) + 20_000
+        new = (t.start_ctx or t.calls[0].ctx_in) + 15_000
         segs = {}
         for c in t.calls:
             segs.setdefault(c.seg, []).append(c)
@@ -769,7 +770,7 @@ def compact_whatif(threads, setting):
                 ctx = c.ctx_in - off
                 if ctx > fire > new:
                     added += 1
-                    saved -= ctx + w["out"] * 4_000 + w["enter"] * new + 20_000
+                    saved -= ctx + w["out"] * 4_000 + w["enter"] * 15_000 + 10_000
                     off, ctx = c.ctx_in - new, new
                 saved += w["read"] * min(c.cread, c.ctx_in - ctx)
     return saved, added
@@ -786,6 +787,78 @@ def compact_setting():
             return json.load(f).get("autoCompactWindow")
     except (OSError, ValueError, AttributeError):
         return None
+
+
+def quick_calls(path):
+    """Main-session calls of one Claude Code transcript, reading only assistant usage lines (fast enough for a hook)."""
+    t, seen, seg = Thread(path, "claude"), {}, 0
+    with open(path, "rb") as f:
+        for pos, line in enumerate(f):
+            if b'"compact_boundary"' in line:
+                seg += 1
+            elif b'"assistant"' in line and b'"usage"' in line and b'"isSidechain":true' not in line:
+                try:
+                    m = json.loads(line).get("message") or {}
+                    u = m["usage"]
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    continue
+                c = seen.get(m.get("id")) or Call(pos, seg)
+                seen[m.get("id")] = c
+                c.fresh = max(c.fresh, u.get("input_tokens") or 0)
+                c.cread = max(c.cread, u.get("cache_read_input_tokens") or 0)
+                c.c5m = max(c.c5m, u.get("cache_creation_input_tokens") or 0)
+                c.out = max(c.out, u.get("output_tokens") or 0)
+    t.calls = sorted(seen.values(), key=lambda c: c.pos)
+    t.start_ctx = t.calls[0].ctx_in if t.calls else None
+    return t
+
+
+def compact_tip(event, now=None):
+    """SessionStart, Claude Code only: when this project's recent sessions show an earlier auto-compact would have
+    paid (10% or more), say so once a week, to the user (never to the model). Checks at most once a day."""
+    now = now or time.time()
+    path = str((event or {}).get("transcript_path") or "")
+    if os.environ.get("TOKENLEAK_TIPS") == "0" or compact_setting() or "/.claude" not in path.replace(os.sep, "/") \
+            and not os.environ.get("CLAUDE_CONFIG_DIR"):
+        return None
+    cache = os.path.join(os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache"), "tokenleak")
+    state_path = os.path.join(cache, "state.json")
+    try:
+        with open(state_path, encoding="utf-8") as f:
+            state = json.load(f)
+    except (OSError, ValueError):
+        state = {}
+    if now - state.get("checked", 0) < 86400 or now - state.get("tipped", 0) < 7 * 86400:
+        return None
+    state["checked"] = now
+    folder = os.path.dirname(path)
+    files = sorted((os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".jsonl")),
+                   key=os.path.getmtime, reverse=True) if os.path.isdir(folder) else []
+    threads, budget = [], 80 << 20  # newest sessions first, up to ~80 MB of transcript
+    for f in files:
+        if budget <= 0 or now - os.path.getmtime(f) > 14 * 86400:
+            break
+        budget -= os.path.getsize(f)
+        t = quick_calls(f)
+        if t.calls:
+            threads.append(t)
+    units = sum(call_cost(t, c, weights(t)) for t in threads for c in t.calls)
+    cw = context_window(threads, units) if units else None
+    tip = None
+    if cw and cw["best"] and cw["best"]["saved_pct"] >= 10:
+        b = cw["best"]
+        state["tipped"] = now
+        tip = (f"tokenleak: in your recent sessions here, {cw['over_200k_pct']:.0f}% of calls re-sent over 200k tokens of "
+               f"context. Replayed with an earlier auto-compact (autoCompactWindow {b['setting']}), they would have cost "
+               f"about {b['saved_pct']:.0f}% less. Set it in /config, Auto-compact window; /tokenleak audits the details. "
+               f"(TOKENLEAK_TIPS=0 to silence)")
+    try:
+        os.makedirs(cache, exist_ok=True)
+        with open(state_path, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+    except OSError:
+        pass
+    return tip
 
 
 def run(args):
@@ -1554,7 +1627,16 @@ def _main(ap, argv):
         buf = io.StringIO()
         print_rules(buf)
         event = argv[1] if len(argv) > 1 else "SessionStart"
-        json.dump({"hookSpecificOutput": {"hookEventName": event, "additionalContext": buf.getvalue()}}, sys.stdout)
+        out = {"hookSpecificOutput": {"hookEventName": event, "additionalContext": buf.getvalue()}}
+        if event == "SessionStart" and not sys.stdin.isatty():
+            try:
+                data = json.loads(sys.stdin.read() or "{}")
+                tip = compact_tip(data) if isinstance(data, dict) and data.get("source") == "startup" else None
+            except Exception:  # a tip must never break session start
+                tip = None
+            if tip:
+                out["systemMessage"] = tip
+        json.dump(out, sys.stdout)
         return 0
     if argv[:1] == ["audit"]:
         argv = argv[1:]

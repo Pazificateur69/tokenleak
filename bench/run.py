@@ -47,6 +47,9 @@ TASKS = {
              "catalog fall in the heavy shipping tariff and are currently out of stock (stock 0)? End your final reply "
              "with a line `ANSWER: <number>`.",
 }
+# a longer session: the same four tasks after reading three big files, so the context climbs well past 100k
+TASKS["chain-long"] = ("Start by reading shopcart/catalog.py, tests/test_cart.py and data/orders.csv in full, and tell me "
+                       "in two lines what each one holds. Then: " + TASKS["chain"])
 VARIANTS = ("baseline", "tokenleak", "guard", "compact")  # guard = rules + the plugin's PreToolUse Read guard
 SCRIPT = os.environ.get("TOKENLEAK_BENCH_SCRIPT") or os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")  # guard under test
 # Same for both variants: the agent can work in its repo (+ temp dirs) and cannot read your personal folders.
@@ -75,7 +78,7 @@ def check(task, work, answer, expected, snap):
         return r.returncode == 0 and digest(glob.glob(os.path.join(work, "tests", "*.py"))) == snap["tests"]
     if task == "find-answer":
         return re.findall(r"\d+", answer or "") == [str(expected["t2_count"])]
-    if task == "chain":  # all four outcomes, in the same repo
+    if task in ("chain", "chain-long"):  # all four outcomes, in the same repo
         m = re.findall(r"ANSWER:\s*(\d+)", answer or "")
         return (bool(m) and m[-1] == str(expected["t2_count"]) and check("fix-test", work, None, expected, snap)
                 and check("fix-build", work, None, expected, snap) and check("add-feature", work, None, expected, snap))

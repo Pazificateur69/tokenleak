@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 
@@ -476,6 +477,30 @@ class TokenleakTest(unittest.TestCase):
         best = T.context_window([long], units)["best"]
         self.assertIn(best["setting"], T.COMPACT_SETTINGS)
         self.assertGreaterEqual(best["saved_pct"], 5)
+
+    def test_compact_tip(self):
+        proj = os.path.join(self.dir, ".claude", "projects", "-proj")
+        os.makedirs(proj)
+        lines = []
+        for i in range(120):  # one long session growing to ~650k, never compacted
+            lines += assistant(f"m{i}", u(cread=50_000 + 5_000 * i, c5m=2_000, out=400),
+                               {"type": "text", "text": "ok"})
+        write_jsonl(os.path.join(proj, "old.jsonl"), lines)
+        now_path = os.path.join(proj, "new.jsonl")
+        write_jsonl(now_path, [])
+        old = dict(os.environ)
+        os.environ.update({"XDG_CACHE_HOME": os.path.join(self.dir, "cache"), "CLAUDE_CONFIG_DIR": os.path.join(self.dir, ".claude")})
+        os.environ.pop("CLAUDE_CODE_AUTO_COMPACT_WINDOW", None)
+        try:
+            tip = T.compact_tip({"transcript_path": now_path})
+            self.assertIn("autoCompactWindow", tip)
+            self.assertIsNone(T.compact_tip({"transcript_path": now_path}))          # at most once a day
+            self.assertIsNone(T.compact_tip({"transcript_path": now_path}, now=time.time() + 2 * 86400))  # a week
+            os.environ["TOKENLEAK_TIPS"] = "0"
+            self.assertIsNone(T.compact_tip({"transcript_path": now_path}, now=time.time() + 30 * 86400))
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
 
     def test_labels(self):
         self.assertEqual(T.tool_name("mcp__1a59c906-04da-521d-bda7-7f71b9f9e01c__guide"), "mcp:guide")

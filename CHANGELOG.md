@@ -2,6 +2,15 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.7.0 (2026-10-13)
+### New
+- **The plugin tells you.** At session start (Claude Code, at most once a day, in about 0.4 s) the hook replays this project's recent sessions; if an earlier auto-compact would have saved 10% or more and you haven't set one, it says so once a week. It is a message to you, never added to the model's context, so it costs no tokens. `TOKENLEAK_TIPS=0` silences it; it keeps one small file, `~/.cache/tokenleak/state.json`.
+
+### Measured
+- **Live, on a longer session** (read three big files, then the four tasks; Haiku 4.5, 4 runs per arm): one early compaction cut the context re-sent by 45% (2.1M → 1.2M tokens) at equal cost (+2%) and equal pass rate (4/4).
+- **Quality under the harshest setting** (`autoCompactWindow` 100k, 1 to 3 compactions mid-task): 9/9 Haiku 4.5 and 3/3 Sonnet 5 runs passed every check, as did every run without it. On short sessions compacting costs more and is slower (Sonnet: $1.09 to $1.39 vs $0.85), which is why tokenleak only recommends it from your own sessions.
+- **Replay recalibrated** on those runs: each compaction is charged its uncached summary call, 4k written, 15k of new context and 10k of re-reads. It predicted +60% where compacting really cost +59% and +46% where it cost +2%: when it errs, it errs against compacting. On the author's last 30 days, `300000` now replays to −24% on the whole bill.
+
 ## 1.6.0 (2026-10-13)
 ### New: the biggest lever for long sessions
 - **Context window replay.** On a 1M-token window Claude Code compacts only near the limit, so everything, the model's own output included, is re-sent on every call. The audit now replays your main Claude Code sessions with an earlier auto-compact (`autoCompactWindow` at 200k, 300k, 400k, 500k), charges every extra compaction on the harsh side, and recommends a value when it saves 5% or more (in the terminal report, `--html` and `--json` under `totals.context_window`). On the author's last 30 days: 66% of calls over 200k tokens, `300000` → −22% on the whole bill.
