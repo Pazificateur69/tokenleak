@@ -1,0 +1,29 @@
+{
+  "task": "marathon-1m",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 321.8,
+  "pass": true,
+  "cost_usd": 5.606455399999999,
+  "num_turns": 65,
+  "session_id": "4b0b5b27-f8ff-42c1-962d-10e24877ab39",
+  "answer": "## Summary\n\n**Legacy review:** Read all 36 `legacy/mod_*.py` files \u2014 each holds ~90 dead `legacy_rule_NN_XX` surcharge functions plus matching `RATES_NN_XX` lists (pre-2024 pricing audit trail, never imported). `legacy/mod_23.py` is the one file that also defines `legacy_rate_table()`, which aggregates every `RATES_*` global.\n\n**1) Failing test suite** \u2014 `shopcart/pricing.py:bulk_discount` used `qty > BULK_THRESHOLD`, but the docstring and `test_bulk_discount_at_threshold` both say the 10% disco",
+  "model": "claude-sonnet-5",
+  "api_calls": 22,
+  "context_tokens": 14191348,
+  "output_tokens": 13867,
+  "max_context": 735040,
+  "compactions": 0,
+  "usage": {
+    "fresh": 44,
+    "cache_write_5m": 0,
+    "cache_write_1h": 691957,
+    "cache_read": 13499347,
+    "output": 13867
+  },
+  "leak_pct": 32.85,
+  "leaks": {
+    "big-read": 38
+  },
+  "escaped": false
+}

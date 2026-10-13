@@ -1,0 +1,29 @@
+{
+  "task": "marathon-1m",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 159.0,
+  "pass": true,
+  "cost_usd": 5.2267238,
+  "num_turns": 64,
+  "session_id": "e7946d20-8e09-4ae6-9641-add9a8532925",
+  "answer": "Confirmed: 9.\n\n## Summary\n\n- **Legacy audit:** read all 36 `legacy/mod_*.py` files \u2014 each holds ~24 `legacy_rule_XX_YY`/`RATES_XX_YY` pairs of old regional/weight-band pricing surcharges, kept for pre-2024 audits only. `legacy_rate_table()` is defined in **mod_23.py**.\n- **Fixed failing test:** `shopcart/pricing.py` \u2014 `bulk_discount` used `qty > BULK_THRESHOLD` but the docstring (and test) require \"`BULK_THRESHOLD` or more\", so `qty == 10` got no discount. Changed to `>=`.\n- **Fixed `build.sh` f",
+  "model": "claude-sonnet-5",
+  "api_calls": 18,
+  "context_tokens": 12026300,
+  "output_tokens": 11806,
+  "max_context": 754488,
+  "compactions": 0,
+  "usage": {
+    "fresh": 36,
+    "cache_write_5m": 0,
+    "cache_write_1h": 711405,
+    "cache_read": 11314859,
+    "output": 11806
+  },
+  "leak_pct": 33.11,
+  "leaks": {
+    "big-read": 39
+  },
+  "escaped": false
+}

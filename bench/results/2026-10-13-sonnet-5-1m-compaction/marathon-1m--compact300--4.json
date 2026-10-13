@@ -1,0 +1,29 @@
+{
+  "task": "marathon-1m",
+  "variant": "compact300",
+  "run": 2,
+  "wall_s": 368.3,
+  "pass": true,
+  "cost_usd": 4.777060700000002,
+  "num_turns": 65,
+  "session_id": "bc983981-bcde-4f3c-b752-ca20ddc43f72",
+  "answer": "All tasks are done and verified in sequence:\n\n1. **Test suite** \u2014 root cause was `shopcart/pricing.py`'s `bulk_discount` using `qty > BULK_THRESHOLD` instead of `>=`, failing the at-threshold test. Fixed; all 126 original tests pass.\n2. **`build.sh`** \u2014 root cause was `tools/report.py` calling a nonexistent `shipping.ship_cost_for`; the real function is `shipping.ship_cost` (confirmed via `tests/test_cart.py` usage). Fixed in `report.py`; `./build.sh` now completes with `== build ok`.\n3\u20135. Added",
+  "model": "claude-sonnet-5",
+  "api_calls": 22,
+  "context_tokens": 2874088,
+  "output_tokens": 13553,
+  "max_context": 656413,
+  "compactions": 2,
+  "usage": {
+    "fresh": 44,
+    "cache_write_5m": 0,
+    "cache_write_1h": 705855,
+    "cache_read": 2168189,
+    "output": 13553
+  },
+  "leak_pct": 3.08,
+  "leaks": {
+    "big-read": 2
+  },
+  "escaped": false
+}

@@ -2,6 +2,10 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.8.2 (2026-10-13)
+### Benchmark, corrected with more runs
+- The 1M-regime A/B now has 4 runs per arm (two batches). Pooled: context re-sent −80%, cost **−16%** (not the −26% of the first 2 runs), 4/4 passed in both arms, slower (315 s vs 245 s median). First batch −26% (Sonnet delegated the bulk read to a subagent), second batch −11% (it read everything itself and compacted 2 to 3 times). README, site and repo description now show the pooled numbers.
+
 ## 1.8.1 (2026-10-13)
 ### Measured live in the 1M regime
 - Sonnet 5 with the 1M-token window, 2 runs per arm (`marathon-1m`: read 36 large legacy modules, then the seven marathon tasks, then a question that needs what was read first). Default: context up to 757k, $5.26 median. `autoCompactWindow` 300000: context 179k to 225k, $3.90 median (**−26%**), context re-sent **−77%**, 2/2 passed in both arms, similar wall time. With the setting, Sonnet delegated the bulk read to a subagent in both runs (36 direct reads without, 10 and 2 with): the gain is the setting's whole effect, compactions plus that change of plan, subagent cost included. Results in `bench/results/2026-10-13-sonnet-5-1m-compaction`.
