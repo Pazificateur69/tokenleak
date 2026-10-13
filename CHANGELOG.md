@@ -2,6 +2,11 @@
 
 All notable changes to tokenleak. Versions follow [semver](https://semver.org/).
 
+## 1.8.1 (2026-10-13)
+### Measured live in the 1M regime
+- Sonnet 5 with the 1M-token window, 2 runs per arm (`marathon-1m`: read 36 large legacy modules, then the seven marathon tasks, then a question that needs what was read first). Default: context up to 757k, $5.26 median. `autoCompactWindow` 300000: context 179k to 225k, $3.90 median (**−26%**), context re-sent **−77%**, 2/2 passed in both arms, similar wall time. With the setting, Sonnet delegated the bulk read to a subagent in both runs (36 direct reads without, 10 and 2 with): the gain is the setting's whole effect, compactions plus that change of plan, subagent cost included. Results in `bench/results/2026-10-13-sonnet-5-1m-compaction`.
+- `bench/fixture.py` can add legacy modules (`legacy=N`); `bench/run.py` gains `marathon-1m` and the `compact300` variant.
+
 ## 1.8.0 (2026-10-13)
 ### New
 - `tokenleak compact`: the replay table for your Claude Code sessions (cost at 200k, 300k, 400k, 500k and the extra compactions), the recommended value, and what you have set now. `tokenleak compact --apply` writes the recommended `autoCompactWindow` to `~/.claude/settings.json`, keeping the rest of the file and a `.bak-tokenleak` backup. Nothing is written without `--apply`.

@@ -1,0 +1,29 @@
+{
+  "task": "marathon-1m",
+  "variant": "baseline",
+  "run": 1,
+  "wall_s": 202.0,
+  "pass": true,
+  "cost_usd": 4.9536992,
+  "num_turns": 65,
+  "session_id": "99df8dfa-e263-4222-90ad-a8d95ed378e0",
+  "answer": "All tasks complete:\n\n1. **Test suite fix**: `shopcart/pricing.py` \u2014 `bulk_discount` used `qty > BULK_THRESHOLD`, which skipped the threshold value itself. Changed to `qty >= BULK_THRESHOLD` to match the docstring (\"10% off when buying BULK_THRESHOLD units or more\").\n2. **build.sh fix**: `tools/report.py` called `shipping.ship_cost_for(product)`, which doesn't exist \u2014 `shipping.py` only defines `ship_cost(product)`. Fixed the call site.\n3\u20135. Added `--category NAME`, `--min-qty N` (combinable), an",
+  "model": "claude-sonnet-5",
+  "api_calls": 15,
+  "context_tokens": 9786631,
+  "output_tokens": 12236,
+  "max_context": 756307,
+  "compactions": 0,
+  "usage": {
+    "fresh": 30,
+    "cache_write_5m": 0,
+    "cache_write_1h": 756305,
+    "cache_read": 9030296,
+    "output": 12236
+  },
+  "leak_pct": 31.93,
+  "leaks": {
+    "big-read": 39
+  },
+  "escaped": false
+}

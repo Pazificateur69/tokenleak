@@ -276,7 +276,27 @@ def orders(prods):
     return "\n".join(rows) + "\n"
 
 
-def write(root):
+LEGACY_HIT = 23  # the one legacy module that defines legacy_rate_table()
+
+
+def legacy_module(k):
+    """~12k tokens of plausible, deterministic old code: rate tables and small helpers."""
+    out = [f'"""Legacy pricing rules, batch {k:02d}. Kept for audits of orders placed before 2024; not imported."""\n']
+    for j in range(90):
+        n = k * 100 + j
+        out.append(f"\n\ndef legacy_rule_{k:02d}_{j:02d}(weight_g, qty):\n"
+                   f'    """Rule {n}: surcharge for parcels in band {j % 7} of region {k % 5}."""\n'
+                   f"    base = {(n * 37) % 900 + 100}\n"
+                   f"    if weight_g > {(n * 53) % 2500 + 200}:\n"
+                   f"        base += {(n * 11) % 300}\n"
+                   f"    return base * qty + {(n * 7) % 50}\n")
+        out.append(f"\nRATES_{k:02d}_{j:02d} = {[(n * i) % 997 for i in range(1, 25)]}\n")
+    if k == LEGACY_HIT:
+        out.append("\n\ndef legacy_rate_table():\n    return {name: value for name, value in globals().items() if name.startswith('RATES_')}\n")
+    return "".join(out)
+
+
+def write(root, legacy=0):
     prods = products()
     files = {
         "README.md": README,
@@ -295,6 +315,8 @@ def write(root):
         "build.sh": BUILD,
         "data/orders.csv": orders(prods),
     }
+    for k in range(1, legacy + 1):
+        files[f"legacy/mod_{k:02d}.py"] = legacy_module(k)
     for rel, text in files.items():
         path = os.path.join(root, rel)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -306,7 +328,7 @@ def write(root):
         cat = prods[(i * 13) % len(prods)]["category"]
         by_cat[cat] = by_cat.get(cat, 0) + 1
     return {"t2_count": sum(1 for p in prods if p["weight_g"] >= 1500 and p["stock"] == 0), "t4_toys": by_cat["toys"],
-            "t4_by_cat": by_cat}
+            "t4_by_cat": by_cat, "legacy_hit": f"mod_{LEGACY_HIT:02d}.py"}
 
 
 if __name__ == "__main__":

@@ -1,0 +1,29 @@
+{
+  "task": "marathon-1m",
+  "variant": "baseline",
+  "run": 2,
+  "wall_s": 287.8,
+  "pass": true,
+  "cost_usd": 5.570523399999998,
+  "num_turns": 65,
+  "session_id": "06cf493c-30b0-4792-94db-da5aebbd4398",
+  "answer": "## Summary\n\n- **legacy/**: read all 36 files (`mod_01.py`\u2013`mod_36.py`) \u2014 legacy pricing-rule tables, unused. `mod_23.py` defines `legacy_rate_table()`.\n- **Test suite**: fixed root cause \u2014 `pricing.bulk_discount` used `qty > BULK_THRESHOLD` instead of `>=`, contradicting its own docstring (\"...or more\"). `python3 -m unittest` passes (now 130 tests).\n- **build.sh**: fixed root cause in `tools/report.py` \u2014 it called `shipping.ship_cost_for(...)`, a function that doesn't exist; `shipping.py` only d",
+  "model": "claude-sonnet-5",
+  "api_calls": 19,
+  "context_tokens": 12788208,
+  "output_tokens": 13472,
+  "max_context": 757395,
+  "compactions": 0,
+  "usage": {
+    "fresh": 38,
+    "cache_write_5m": 0,
+    "cache_write_1h": 757393,
+    "cache_read": 12030777,
+    "output": 13472
+  },
+  "leak_pct": 31.95,
+  "leaks": {
+    "big-read": 39
+  },
+  "escaped": false
+}

@@ -61,9 +61,14 @@ TASKS["marathon"] = (
     "file tests/test_report_options.py, and make sure `python3 -m unittest` passes. 7) How many products in the "
     "catalog fall in the heavy shipping tariff and are out of stock (stock 0)? End your final reply with a line "
     "`ANSWER: <number>`.")
+# the 1M-context regime: read ~430k tokens of legacy code first, then the marathon, then a question that needs it
+TASKS["marathon-1m"] = (
+    "First read every file in legacy/ in full, one Read per file (no grep, no partial reads), and keep a one-line note "
+    "of what each holds. Then: " + TASKS["marathon"] + " Finally, which file in legacy/ defines the function "
+    "`legacy_rate_table`? Add a line `LEGACY: <file name>` to your final reply.")
 TASKS["chain-long"] = ("Start by reading shopcart/catalog.py, tests/test_cart.py and data/orders.csv in full, and tell me "
                        "in two lines what each one holds. Then: " + TASKS["chain"])
-VARIANTS = ("baseline", "tokenleak", "guard", "compact")  # guard = rules + the plugin's PreToolUse Read guard
+VARIANTS = ("baseline", "tokenleak", "guard", "compact", "compact300")  # guard = rules + the plugin's PreToolUse Read guard
 SCRIPT = os.environ.get("TOKENLEAK_BENCH_SCRIPT") or os.path.join(ROOT, "skills", "tokenleak", "scripts", "tokenleak.py")  # guard under test
 # Same for both variants: the agent can work in its repo (+ temp dirs) and cannot read your personal folders.
 HOME_DIRS = ["~/Desktop", "~/Documents", "~/Downloads", "~/Developer", "~/.claude", "~/.codex", "~/.ssh", "~/Library"]
@@ -93,6 +98,9 @@ def check(task, work, answer, expected, snap):
         return re.findall(r"\d+", answer or "") == [str(expected["t2_count"])]
     if task == "marathon":
         return check_marathon(work, answer, expected, snap)
+    if task == "marathon-1m":
+        hit = re.findall(r"LEGACY:\s*\S*?(mod_\d+\.py)", answer or "")
+        return bool(hit) and hit[-1] == expected["legacy_hit"] and check_marathon(work, answer, expected, snap)
     if task in ("chain", "chain-long"):  # all four outcomes, in the same repo
         m = re.findall(r"ANSWER:\s*(\d+)", answer or "")
         return (bool(m) and m[-1] == str(expected["t2_count"]) and check("fix-test", work, None, expected, snap)
@@ -218,12 +226,12 @@ def escaped(transcript, work):
 
 def run_one(task, variant, i, args, outdir, rules):
     work = tempfile.mkdtemp(prefix=f"{task}-{variant}-{i}-", dir=args.workdir)
-    expected = fixture.write(work)
+    expected = fixture.write(work, legacy=36 if task == "marathon-1m" else 0)
     snap = {"tests": digest(glob.glob(os.path.join(work, "tests", "*.py"))),
             "build": digest([os.path.join(work, "build.sh")])}
     settings = dict(SANDBOX)
-    if variant == "compact":  # Claude Code's own setting: auto-compact once the context reaches 100k tokens
-        settings["autoCompactWindow"] = 100000
+    if variant in ("compact", "compact300"):  # Claude Code's own setting: auto-compact at 100k / 300k tokens
+        settings["autoCompactWindow"] = 100000 if variant == "compact" else 300000
     if variant == "guard":
         settings["hooks"] = {"PreToolUse": [{"matcher": "Read", "hooks": [
             {"type": "command", "command": f'python3 "{SCRIPT}" guard'}]}]}

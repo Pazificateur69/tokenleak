@@ -1,0 +1,30 @@
+{
+  "task": "marathon-1m",
+  "variant": "compact300",
+  "run": 1,
+  "wall_s": 248.2,
+  "pass": true,
+  "cost_usd": 3.4585347000000004,
+  "num_turns": 40,
+  "session_id": "9c5334a5-06c5-4401-a46c-c7cca5e1f6e9",
+  "answer": "All 9 are confirmed, each \u22651500g (heavy tariff) with stock 0. All tasks are complete:\n\n1. **Fixed** `shopcart/pricing.py`: `bulk_discount` used `qty > BULK_THRESHOLD` instead of `>=`, so a qty of exactly 10 got no discount, failing `test_bulk_discount_at_threshold`.\n2. **Fixed** `tools/report.py`: it called `shipping.ship_cost_for(product)`, a function that doesn't exist in `shopcart/shipping.py` (which only defines `ship_cost`) \u2014 crashed the build's report step.\n3-5. Added `--category NAME`, `-",
+  "model": "claude-sonnet-5",
+  "api_calls": 14,
+  "context_tokens": 2063854,
+  "output_tokens": 14805,
+  "max_context": 224719,
+  "compactions": 1,
+  "usage": {
+    "fresh": 28,
+    "cache_write_5m": 0,
+    "cache_write_1h": 340535,
+    "cache_read": 1723291,
+    "output": 14805
+  },
+  "leak_pct": 15.08,
+  "leaks": {
+    "big-read": 11,
+    "wasted-call": 1
+  },
+  "escaped": false
+}
